@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2563eb">
+<title>ASKA Dairy Farm | Dairy Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div id="welcomeScreen" class="welcome-screen">
+  <div class="welcome-orb orb-a"></div>
+  <div class="welcome-orb orb-b"></div>
+  <div class="welcome-panel">
+    <div class="brand-badge">ASKA</div>
+    <div class="welcome-icon">🐃</div>
+    <div class="eyebrow">DAIRY OPERATIONS</div>
+    <h1>Welcome to ASKA Dairy Farm</h1>
+    <p>Daily insemination, birth and livestock tracking — all in one place.</p>
+    <form id="welcomeForm">
+      <label for="viewerName">Your name</label>
+      <input id="viewerName" autocomplete="name" maxlength="60" placeholder="Enter your name" required>
+      <div id="nameError" class="field-error"></div>
+      <button class="btn btn-primary btn-lg" type="submit">Continue <span>→</span></button>
+    </form>
+    <div class="welcome-footer">Shared dairy records • Cloud connected</div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+
+<header class="app-header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-icon">A</div>
+      <div>
+        <div class="brand-name">ASKA Dairy Management</div>
+        <div class="brand-subtitle">Daily Insemination &amp; Birth Tracking</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="sync-status"><span class="pulse"></span><span>Cloud synced</span></div>
+      <div class="user-menu">
+        <div class="avatar" id="userAvatar">U</div>
+        <div class="user-copy"><strong id="currentUser"></strong><span>Operator</span></div>
+        <button id="changeUser" class="icon-btn" title="Change user">↪</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="nav-shell">
+  <div class="nav-inner">
+    <button class="nav-tab active" data-tab="records">
+      <span class="nav-icon">▦</span> Daily Records
+    </button>
+    <button class="nav-tab" data-tab="registry">
+      <span class="nav-icon">♙</span> Buffalo Registry
+    </button>
+    <button id="auditNav" class="nav-tab hidden" data-tab="audit">
+      <span class="nav-icon">◷</span> Audit Logs
+    </button>
+  </div>
+</nav>
+
+<main class="page">
+
+<section id="records" class="tab-content active">
+
+  <div class="page-heading">
+    <div>
+      <div class="eyebrow">OVERVIEW</div>
+      <h1>Daily Records</h1>
+      <p>Track insemination and expected birth milestones for every buffalo.</p>
+    </div>
+    <div class="date-chip"><span>Today</span><strong id="todayLabel"></strong></div>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-label">Registered Buffaloes</div>
+      <div class="metric-value" id="metricRegistered">0</div>
+      <div class="metric-caption">Master registry</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Active Tracking</div>
+      <div class="metric-value" id="metricActive">0</div>
+      <div class="metric-caption">Current records</div>
+    </div>
+    <div class="metric-card metric-warning">
+      <div class="metric-label">Pending to Track</div>
+      <div class="metric-value" id="metricPending">0</div>
+      <div class="metric-caption">Need daily record</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Successful</div>
+      <div class="metric-value" id="metricSuccess">0</div>
+      <div class="metric-caption">Birth date reached</div>
+    </div>
+  </div>
+
+  <div class="card form-card">
+    <div class="card-heading">
+      <div>
+        <div class="section-kicker">ENTRY</div>
+        <h2 id="formTitle">Add Daily Record</h2>
+        <p>Select a buffalo from the master registry. Insurance number fills automatically.</p>
+      </div>
+      <div id="editingBadge" class="editing-badge hidden">Editing record</div>
+    </div>
+
+    <form id="recordForm">
+      <input type="hidden" id="editId">
+      <div class="form-grid">
+        <div class="field">
+          <label for="buffaloSelect">Select Buffalo <span>*</span></label>
+          <select id="buffaloSelect" required>
+            <option value="">— Choose Buffalo —</option>
+          </select>
+          <div class="field-hint">Names come from Buffalo Registry</div>
+        </div>
+        <div class="field">
+          <label for="insuranceNumber">Insurance Number</label>
+          <input id="insuranceNumber" readonly placeholder="Auto-filled from registry">
+          <div class="field-hint">Linked to selected buffalo</div>
+        </div>
+        <div class="field">
+          <label for="inseminationDate">Insemination Date</label>
+          <input id="inseminationDate" type="date">
+          <div class="field-hint">Optional — enter if known</div>
+        </div>
+        <div class="field">
+          <label for="birthDate">Birth Date</label>
+          <input id="birthDate" type="date">
+          <div class="field-hint">Optional — enter if known</div>
+        </div>
+        <div class="field">
+          <label for="recordStatus">Status</label>
+          <select id="recordStatus">
+            <option value="Pending">Pending</option>
+            <option value="Successful">Successful</option>
+            <option value="Unsuccessful">Unsuccessful</option>
+          </select>
+          <div class="field-hint">Click and choose the current result</div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button id="saveBtn" class="btn btn-primary" type="submit">Save Entry <span>→</span></button>
+        <button id="cancelEdit" class="btn btn-secondary hidden" type="button">Cancel Edit</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="section-heading-row">
+    <div>
+      <div class="section-kicker">TRACKING</div>
+      <h2>Active Tracking Records</h2>
+      <p>Current records with automatically calculated elapsed days.</p>
+    </div>
+    <div class="search-box">
+      <span>⌕</span>
+      <input id="recordSearch" placeholder="Search buffalo, insurance...">
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Insurance Number</th>
+            <th>Insemination Date</th>
+            <th>Days Elapsed From Insemination</th>
+            <th>Birth Date</th>
+            <th>Days Elapsed From Birth</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="recordsBody"></tbody>
+      </table>
+    </div>
+    <div id="emptyRecords" class="empty-state hidden">
+      <div class="empty-icon">▦</div>
+      <strong>No tracking records found</strong>
+      <span>Add a record above or change your search.</span>
+    </div>
+  </div>
+
+  <div class="section-heading-row pending-heading">
+    <div>
+      <div class="section-kicker danger-kicker">ATTENTION REQUIRED</div>
+      <h2>Pending Animals <span>(Not Yet Tracked)</span></h2>
+      <p>Buffaloes in the master registry that do not have an active tracking record.</p>
+    </div>
+    <div class="pending-count" id="pendingCount">0 pending</div>
+  </div>
+
+  <div class="card table-card pending-card">
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Buffalo Name</th>
+            <th>Insurance No</th>
+            <th>Current Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="pendingBody"></tbody>
+      </table>
+    </div>
+    <div id="emptyPending" class="empty-state hidden">
+      <div class="empty-icon success-icon">✓</div>
+      <strong>All registered buffaloes are being tracked</strong>
+      <span>No pending animals at the moment.</span>
+    </div>
+  </div>
+
+</section>
+
+
+<section id="registry" class="tab-content">
+
+  <div class="page-heading">
+    <div>
+      <div class="eyebrow">MASTER DATA</div>
+      <h1>Buffalo Registry</h1>
+      <p>Maintain the master list used throughout the dairy tracking system.</p>
+    </div>
+    <div class="date-chip"><span>Total</span><strong id="registryTotal">0 buffaloes</strong></div>
+  </div>
+
+  <div class="card form-card">
+    <div class="card-heading">
+      <div>
+        <div class="section-kicker">MASTER LIST</div>
+        <h2>Register Buffalo</h2>
+        <p>Add the buffalo name and insurance number once. Daily Records will use this list.</p>
+      </div>
+    </div>
+    <form id="registryForm">
+      <div class="registry-form-grid">
+        <div class="field">
+          <label for="registryName">Name <span>*</span></label>
+          <input id="registryName" required maxlength="100" placeholder="Buffalo name">
+        </div>
+        <div class="field">
+          <label for="registryInsurance">Insurance No <span>*</span></label>
+          <input id="registryInsurance" required maxlength="60" placeholder="Insurance number">
+        </div>
+        <div class="registry-submit">
+          <button class="btn btn-primary" type="submit">Add to Master List <span>→</span></button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="section-heading-row">
+    <div>
+      <div class="section-kicker">REGISTRY</div>
+      <h2>Master Buffalo List</h2>
+      <p>Every name here becomes available in Daily Records.</p>
+    </div>
+    <div class="search-box">
+      <span>⌕</span>
+      <input id="registrySearch" placeholder="Search buffalo...">
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-wrap">
+      <table class="data-table registry-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Insurance No</th>
+            <th>Added By</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="registryBody"></tbody>
+      </table>
+    </div>
+    <div id="emptyRegistry" class="empty-state hidden">
+      <div class="empty-icon">♙</div>
+      <strong>No buffaloes registered</strong>
+      <span>Add your first buffalo above.</span>
+    </div>
+  </div>
+
+</section>
+
+
+<section id="audit" class="tab-content">
+
+  <div class="page-heading">
+    <div>
+      <div class="eyebrow">CONTROL CENTER</div>
+      <h1>Audit Logs</h1>
+      <p>A chronological record of every Create, Edit and Delete action.</p>
+    </div>
+    <button class="btn btn-secondary" id="exportAudit">↓ Export CSV</button>
+  </div>
+
+  <div class="audit-banner">
+    <div class="audit-shield">✓</div>
+    <div>
+      <strong>Audit access enabled</strong>
+      <span>Signed in as <b id="auditUser"></b>. Logs are loaded directly from the shared database.</span>
+    </div>
+  </div>
+
+  <div class="section-heading-row">
+    <div>
+      <div class="section-kicker">HISTORY</div>
+      <h2>Change History</h2>
+      <p>The latest state of the record at the time of each action is preserved.</p>
+    </div>
+    <div class="search-box">
+      <span>⌕</span>
+      <input id="auditSearch" placeholder="Search logs...">
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-wrap">
+      <table class="data-table audit-table">
+        <thead>
+          <tr>
+            <th>Date &amp; Time</th>
+            <th>Changed By</th>
+            <th>Name</th>
+            <th>Insurance Number</th>
+            <th>Insemination Date</th>
+            <th>Days Elapsed From Insemination</th>
+            <th>Birth Date</th>
+            <th>Days Elapsed From Birth</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="auditBody"></tbody>
+      </table>
+    </div>
+    <div id="emptyAudit" class="empty-state hidden">
+      <div class="empty-icon">◷</div>
+      <strong>No audit logs yet</strong>
+      <span>Create, edit or delete a record to generate history.</span>
+    </div>
+  </div>
+
+</section>
+
+</main>
+
+<footer>
+  <div>ASKA Dairy Farm</div>
+  <span>Shared cloud records · Audit history enabled</span>
+</footer>
+
+</div>
+
+<!-- ASKA Audit Change Modal -->
+<div id="auditModal" class="audit-modal hidden">
+  <div class="audit-modal-overlay" onclick="closeAuditModal()"></div>
+  <div class="audit-modal-box" role="dialog" aria-modal="true" aria-labelledby="auditModalTitle">
+    <div class="audit-modal-header">
+      <div class="audit-modal-brand">
+        <div class="audit-modal-icon">A</div>
+        <div>
+          <div class="audit-modal-title">ASKA Dairy Farm</div>
+          <div class="audit-modal-subtitle">Audit Change Details</div>
+        </div>
+      </div>
+      <button class="audit-modal-close" onclick="closeAuditModal()" aria-label="Close">×</button>
+    </div>
+    <div class="audit-modal-content">
+      <div class="audit-change-heading">
+        <div class="audit-change-icon">↔</div>
+        <div>
+          <h3 id="auditModalTitle">Record Changes</h3>
+          <p>Comparison of the previous and updated values.</p>
+        </div>
+      </div>
+      <div id="auditChangesContent"></div>
+    </div>
+    <div class="audit-modal-footer">
+      <button class="btn btn-primary" onclick="closeAuditModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
