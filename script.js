@@ -1985,7 +1985,7 @@ async function(id) {
 
 
 /* ==========================================================
-   BUFFALO REGISTRY - ADD
+   BUFFALO REGISTRY - ADD / EDIT
 ========================================================== */
 
 if ($("registryForm")) {
@@ -1997,12 +1997,13 @@ if ($("registryForm")) {
 
                 event.preventDefault();
 
+                const editId =
+                    $("registryEditId")?.value?.trim() || "";
 
                 const name =
                     $("registryName")
                         .value
                         .trim();
-
 
                 const insurance =
                     $("registryInsurance")
@@ -2010,10 +2011,11 @@ if ($("registryForm")) {
                         .trim();
 
 
-                if (
-                    !name ||
-                    !insurance
-                ) {
+                /* ==========================================
+                   VALIDATION
+                ========================================== */
+
+                if (!name || !insurance) {
 
                     alert(
                         "Buffalo name and insurance number are required."
@@ -2024,47 +2026,236 @@ if ($("registryForm")) {
                 }
 
 
+                const button =
+                    $("registrySaveBtn");
+
+                const originalText =
+                    editId
+                        ? "Update Buffalo →"
+                        : "Add to Master List →";
+
+
+                if (button) {
+
+                    button.disabled = true;
+
+                    button.innerHTML =
+                        editId
+                            ? "Updating..."
+                            : "Saving...";
+
+                }
+
+
                 try {
 
 
-                    const {
-                        error
-                    } =
+                    /* ==========================================
+                       EDIT EXISTING BUFFALO
+                    ========================================== */
 
-                        await supabaseClient
+                    if (editId) {
 
-                            .from(
-                                "buffalo_registry"
-                            )
-
-                            .insert({
-
-                                name,
-
-                                insurance_number:
-                                    insurance,
-
-                                added_by:
-                                    currentUser
-
-                            });
+                        const oldBuffalo =
+                            registry.find(
+                                buffalo =>
+                                    String(buffalo.id) ===
+                                    String(editId)
+                            );
 
 
-                    if (error)
+                        if (!oldBuffalo) {
 
-                        throw error;
+                            throw new Error(
+                                "The buffalo could not be found in the current registry."
+                            );
 
-
-                    $("registryForm")
-                        .reset();
-
-
-                    await loadAll();
+                        }
 
 
-                    toast(
-                        `${name} added to the master list.`
-                    );
+                        /*
+                         * IMPORTANT:
+                         * Update registry and RETURN the
+                         * actual updated database row.
+                         */
+
+                        const {
+
+                            data: updatedBuffalo,
+
+                            error
+
+                        } =
+
+                            await supabaseClient
+
+                                .from(
+                                    "buffalo_registry"
+                                )
+
+                                .update({
+
+                                    name:
+                                        name,
+
+                                    insurance_number:
+                                        insurance
+
+                                })
+
+                                .eq(
+                                    "id",
+                                    editId
+                                )
+
+                                .select("*")
+                                .single();
+
+
+                        if (error)
+
+                            throw error;
+
+
+                        if (!updatedBuffalo) {
+
+                            throw new Error(
+                                "Supabase did not return the updated buffalo."
+                            );
+
+                        }
+
+
+                        /* ==========================================
+                           UPDATE LINKED DAILY RECORDS
+                        ========================================== */
+
+                        const {
+
+                            data: linkedRecords,
+
+                            error:
+                                linkedRecordsError
+
+                        } =
+
+                            await supabaseClient
+
+                                .from(
+                                    "buffalo_records"
+                                )
+
+                                .update({
+
+                                    name:
+                                        name,
+
+                                    insurance_number:
+                                        insurance,
+
+                                    updated_by:
+                                        currentUser
+
+                                })
+
+                                .eq(
+                                    "buffalo_id",
+                                    editId
+                                )
+
+                                .select("*");
+
+
+                        if (linkedRecordsError)
+
+                            throw linkedRecordsError;
+
+
+                        /* ==========================================
+                           RESET FORM
+                        ========================================== */
+
+                        resetRegistryForm();
+
+
+                        /*
+                         * Reload directly from Supabase.
+                         * This ensures UI is showing database
+                         * values, not stale JavaScript values.
+                         */
+
+                        await loadAll();
+
+
+                        toast(
+                            `${name} updated successfully.`
+                        );
+
+                    }
+
+
+                    /* ==========================================
+                       ADD NEW BUFFALO
+                    ========================================== */
+
+                    else {
+
+                        const {
+
+                            data: createdBuffalo,
+
+                            error
+
+                        } =
+
+                            await supabaseClient
+
+                                .from(
+                                    "buffalo_registry"
+                                )
+
+                                .insert({
+
+                                    name:
+                                        name,
+
+                                    insurance_number:
+                                        insurance,
+
+                                    added_by:
+                                        currentUser
+
+                                })
+
+                                .select("*")
+                                .single();
+
+
+                        if (error)
+
+                            throw error;
+
+
+                        if (!createdBuffalo) {
+
+                            throw new Error(
+                                "Buffalo was not returned after insertion."
+                            );
+
+                        }
+
+
+                        resetRegistryForm();
+
+
+                        await loadAll();
+
+
+                        toast(
+                            `${name} added to the master list.`
+                        );
+
+                    }
 
                 }
 
@@ -2072,14 +2263,30 @@ if ($("registryForm")) {
                 catch (error) {
 
                     console.error(
+                        "Registry save error:",
                         error
                     );
 
 
                     alert(
-                        "Could not add buffalo.\n\n" +
-                        error.message
+                        "Could not save the buffalo.\n\n" +
+                        (error?.message || error)
                     );
+
+                }
+
+
+                finally {
+
+                    if (button) {
+
+                        button.disabled =
+                            false;
+
+                        button.innerHTML =
+                            originalText;
+
+                    }
 
                 }
 
@@ -2088,6 +2295,200 @@ if ($("registryForm")) {
 
 }
 
+
+/* ==========================================================
+   RESET REGISTRY FORM
+========================================================== */
+
+function resetRegistryForm() {
+
+    const form =
+        $("registryForm");
+
+    if (form)
+
+        form.reset();
+
+
+    if ($("registryEditId"))
+
+        $("registryEditId")
+            .value = "";
+
+
+    if ($("registrySaveBtn"))
+
+        $("registrySaveBtn")
+            .innerHTML =
+                "Add to Master List <span>→</span>";
+
+
+    if ($("registryCancelEdit"))
+
+        $("registryCancelEdit")
+            .classList.add("hidden");
+
+
+    if ($("registryEditActions"))
+
+        $("registryEditActions")
+            .classList.add("hidden");
+
+
+    /*
+     * Remove edit styling if we add any later.
+     */
+
+    if ($("registryName"))
+
+        $("registryName")
+            .focus();
+
+}
+
+
+/* ==========================================================
+   EDIT REGISTRY
+========================================================== */
+
+window.editRegistry =
+function(id) {
+
+    const buffalo =
+        registry.find(
+            item =>
+                String(item.id) ===
+                String(id)
+        );
+
+
+    if (!buffalo) {
+
+        alert(
+            "Buffalo record could not be found."
+        );
+
+        return;
+
+    }
+
+
+    /*
+     * Put the selected buffalo into the
+     * SAME form used for adding.
+     */
+
+    $("registryEditId")
+        .value =
+            buffalo.id;
+
+
+    $("registryName")
+        .value =
+            buffalo.name || "";
+
+
+    $("registryInsurance")
+        .value =
+            buffalo.insurance_number || "";
+
+
+    /*
+     * Change button to UPDATE mode.
+     */
+
+    $("registrySaveBtn")
+        .innerHTML =
+            "Update Buffalo <span>✓</span>";
+
+
+    /*
+     * Show Cancel Edit.
+     */
+
+    $("registryCancelEdit")
+        .classList.remove("hidden");
+
+
+    $("registryEditActions")
+        .classList.remove("hidden");
+
+
+    /*
+     * Change heading text if the element exists.
+     */
+
+    const registryHeading =
+        document.querySelector(
+            "#registryForm"
+        )?.closest(".form-card")
+        ?.querySelector("h2");
+
+
+    if (registryHeading)
+
+        registryHeading.textContent =
+            "Edit Buffalo";
+
+
+    /*
+     * Scroll to the form.
+     */
+
+    $("registryForm")
+        .scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+
+
+    /*
+     * Put cursor in name field.
+     */
+
+    setTimeout(
+        () => {
+
+            $("registryName")
+                ?.focus();
+
+        },
+        350
+    );
+
+};
+
+
+/* ==========================================================
+   CANCEL REGISTRY EDIT
+========================================================== */
+
+if ($("registryCancelEdit")) {
+
+    $("registryCancelEdit")
+        .addEventListener(
+            "click",
+            () => {
+
+                resetRegistryForm();
+
+
+                const registryHeading =
+                    document.querySelector(
+                        "#registryForm"
+                    )?.closest(".form-card")
+                    ?.querySelector("h2");
+
+
+                if (registryHeading)
+
+                    registryHeading.textContent =
+                        "Register Buffalo";
+
+            }
+        );
+
+}
 
 /* ==========================================================
    RENDER REGISTRY

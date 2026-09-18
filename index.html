@@ -246,20 +246,69 @@
       </div>
     </div>
     <form id="registryForm">
-      <div class="registry-form-grid">
-        <div class="field">
-          <label for="registryName">Name <span>*</span></label>
-          <input id="registryName" required maxlength="100" placeholder="Buffalo name">
-        </div>
-        <div class="field">
-          <label for="registryInsurance">Insurance No <span>*</span></label>
-          <input id="registryInsurance" required maxlength="60" placeholder="Insurance number">
-        </div>
-        <div class="registry-submit">
-          <button class="btn btn-primary" type="submit">Add to Master List <span>→</span></button>
-        </div>
-      </div>
-    </form>
+
+  <!-- Hidden ID used while editing -->
+  <input type="hidden" id="registryEditId">
+
+  <div class="registry-form-grid">
+
+    <div class="field">
+      <label for="registryName">
+        Name <span>*</span>
+      </label>
+
+      <input
+        id="registryName"
+        required
+        maxlength="100"
+        placeholder="Buffalo name"
+      >
+    </div>
+
+    <div class="field">
+      <label for="registryInsurance">
+        Insurance No <span>*</span>
+      </label>
+
+      <input
+        id="registryInsurance"
+        required
+        maxlength="60"
+        placeholder="Insurance number"
+      >
+    </div>
+
+    <div class="registry-submit">
+
+      <button
+        id="registrySaveBtn"
+        class="btn btn-primary"
+        type="submit"
+      >
+        Add to Master List <span>→</span>
+      </button>
+
+    </div>
+
+  </div>
+
+  <div
+    id="registryEditActions"
+    class="form-actions hidden"
+    style="margin-top:16px;"
+  >
+
+    <button
+      id="registryCancelEdit"
+      class="btn btn-secondary"
+      type="button"
+    >
+      Cancel Edit
+    </button>
+
+  </div>
+
+</form>
   </div>
 
   <div class="section-heading-row">
