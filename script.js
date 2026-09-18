@@ -1,12 +1,11 @@
 /* ==========================================================
    ASKA DAIRY FARM
-   GitHub Pages + Supabase
-   FINAL VERSION
+   SUPABASE + BUFFALO REGISTRY + DAILY RECORDS + AUDIT LOGS
 ========================================================== */
 
 
 /* ==========================================================
-   SUPABASE CONNECTION
+   SUPABASE
 ========================================================== */
 
 const SUPABASE_URL =
@@ -14,7 +13,6 @@ const SUPABASE_URL =
 
 const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_U5p9tVbt7iqpUdkL0gcxEA_FAinSGsP";
-
 
 const supabaseClient =
     window.supabase.createClient(
@@ -24,7 +22,7 @@ const supabaseClient =
 
 
 /* ==========================================================
-   GLOBAL DATA
+   GLOBAL VARIABLES
 ========================================================== */
 
 let records = [];
@@ -36,16 +34,17 @@ let auditLogs = [];
 let currentUser = "";
 
 
+/* ==========================================================
+   SHORT DOM HELPER
+========================================================== */
+
 const $ = id =>
     document.getElementById(id);
 
 
 /* ==========================================================
-   UTILITY FUNCTIONS
+   ESCAPE HTML
 ========================================================== */
-
-
-/* HTML escape */
 
 function esc(value) {
 
@@ -64,7 +63,9 @@ function esc(value) {
 }
 
 
-/* Normalize text */
+/* ==========================================================
+   NORMALIZE TEXT
+========================================================== */
 
 function normalized(value) {
 
@@ -75,7 +76,9 @@ function normalized(value) {
 }
 
 
-/* Today's date at midnight */
+/* ==========================================================
+   TODAY START
+========================================================== */
 
 function todayStart() {
 
@@ -90,7 +93,9 @@ function todayStart() {
 }
 
 
-/* Calculate elapsed days */
+/* ==========================================================
+   DAYS ELAPSED
+========================================================== */
 
 function daysElapsed(dateString) {
 
@@ -123,7 +128,9 @@ function daysElapsed(dateString) {
 }
 
 
-/* Format date */
+/* ==========================================================
+   FORMAT DATE
+========================================================== */
 
 function formatDate(dateString) {
 
@@ -159,7 +166,9 @@ function formatDate(dateString) {
 }
 
 
-/* Format date + time */
+/* ==========================================================
+   FORMAT DATE + TIME
+========================================================== */
 
 function formatDateTime(value) {
 
@@ -209,31 +218,23 @@ function makeStatus(record) {
 
 
     if (
-        value ===
-        "successful"
-    ) {
+        value === "successful"
+    )
 
         return "Successful";
 
-    }
-
 
     if (
-        value ===
-        "unsuccessful"
-    ) {
+        value === "unsuccessful"
+    )
 
         return "Unsuccessful";
-
-    }
 
 
     return "Pending";
 
 }
 
-
-/* Convert status to CSS class */
 
 function statusClass(status) {
 
@@ -325,7 +326,7 @@ function setButtonLoading(
 
 
 /* ==========================================================
-   DATABASE LOADING
+   LOAD ALL DATA FROM SUPABASE
 ========================================================== */
 
 async function loadAll() {
@@ -340,15 +341,9 @@ async function loadAll() {
 
     ] = await Promise.all([
 
-
         supabaseClient
-
-            .from(
-                "buffalo_records"
-            )
-
+            .from("buffalo_records")
             .select("*")
-
             .order(
                 "created_at",
                 {
@@ -356,15 +351,9 @@ async function loadAll() {
                 }
             ),
 
-
         supabaseClient
-
-            .from(
-                "buffalo_registry"
-            )
-
+            .from("buffalo_registry")
             .select("*")
-
             .order(
                 "created_at",
                 {
@@ -372,15 +361,9 @@ async function loadAll() {
                 }
             ),
 
-
         supabaseClient
-
-            .from(
-                "audit_logs"
-            )
-
+            .from("audit_logs")
             .select("*")
-
             .order(
                 "changed_at",
                 {
@@ -434,16 +417,12 @@ async function loadAll() {
 
 
 /* ==========================================================
-   REGISTRY / RECORD MATCHING
+   FIND REGISTRY BUFFALO FOR RECORD
 ========================================================== */
 
-function getRegistryForRecord(
-    record
-) {
+function getRegistryForRecord(record) {
 
-    if (
-        record.buffalo_id
-    ) {
+    if (record.buffalo_id) {
 
         return registry.find(
             buffalo =>
@@ -478,11 +457,11 @@ function getRegistryForRecord(
 }
 
 
-/* Check whether registry buffalo has active record */
+/* ==========================================================
+   CHECK WHETHER BUFFALO HAS A RECORD
+========================================================== */
 
-function isRegistryTracked(
-    buffalo
-) {
+function isRegistryTracked(buffalo) {
 
     return records.some(
         record => {
@@ -526,7 +505,7 @@ function isRegistryTracked(
 
 
 /* ==========================================================
-   BUFFALO DROPDOWN
+   POPULATE BUFFALO DROPDOWN
 ========================================================== */
 
 function populateBuffaloDropdown() {
@@ -593,7 +572,9 @@ function populateBuffaloDropdown() {
 }
 
 
-/* Buffalo selection */
+/* ==========================================================
+   BUFFALO DROPDOWN CHANGE
+========================================================== */
 
 if ($("buffaloSelect")) {
 
@@ -610,10 +591,12 @@ if ($("buffaloSelect")) {
                     );
 
 
-                $("insuranceNumber")
-                    .value =
-                    buffalo?.insurance_number ||
-                    "";
+                if ($("insuranceNumber"))
+
+                    $("insuranceNumber")
+                        .value =
+                        buffalo?.insurance_number ||
+                        "";
 
             }
         );
@@ -622,7 +605,7 @@ if ($("buffaloSelect")) {
 
 
 /* ==========================================================
-   ACTIVE TRACKING RECORDS
+   RENDER DAILY RECORDS
 ========================================================== */
 
 function renderRecords() {
@@ -668,81 +651,92 @@ function renderRecords() {
     $("recordsBody")
         .innerHTML =
 
-        filtered
+        filtered.map(
+            record => {
 
-            .map(
-                record => {
-
-                    const status =
-                        makeStatus(
-                            record
-                        );
+                const status =
+                    makeStatus(
+                        record
+                    );
 
 
-                    const inseminationDays =
-                        daysElapsed(
-                            record.insemination_date
-                        );
+                const inseminationDays =
+                    daysElapsed(
+                        record.insemination_date
+                    );
 
 
-                    const birthDays =
-                        record.birth_date
+                const birthDays =
+                    record.birth_date
 
-                            ? daysElapsed(
-                                record.birth_date
-                            )
+                        ? daysElapsed(
+                            record.birth_date
+                        )
 
-                            : null;
+                        : null;
 
 
-                    return `
+                return `
 
 <tr>
-
 
 <td>
 
     <strong>
-        ${esc(record.name)}
+
+        ${esc(
+            record.name
+        )}
+
     </strong>
 
 </td>
 
 
 <td>
+
     ${esc(
         record.insurance_number
     )}
+
 </td>
 
 
 <td>
+
     ${formatDate(
         record.insemination_date
     )}
+
 </td>
 
 
 <td>
+
     ${
         inseminationDays ??
         "—"
     }
+
 </td>
 
 
 <td>
+
     ${formatDate(
         record.birth_date
     )}
+
 </td>
 
 
 <td>
+
     ${
         birthDays ??
         "—"
     }
+
 </td>
 
 
@@ -767,7 +761,9 @@ function renderRecords() {
             class="table-action"
             onclick="editRecord('${record.id}')"
         >
+
             Edit
+
         </button>
 
 
@@ -775,22 +771,21 @@ function renderRecords() {
             class="table-action delete"
             onclick="deleteRecord('${record.id}')"
         >
+
             Delete
+
         </button>
 
     </div>
 
 </td>
 
-
 </tr>
 
 `;
 
-                }
-            )
-
-            .join("");
+            }
+        ).join("");
 
 
     if ($("emptyRecords")) {
@@ -807,7 +802,7 @@ function renderRecords() {
 
 
 /* ==========================================================
-   PENDING ANIMALS
+   RENDER PENDING ANIMALS
 ========================================================== */
 
 function renderPending() {
@@ -826,20 +821,19 @@ function renderPending() {
         $("pendingBody")
             .innerHTML =
 
-            pending
-
-                .map(
-                    buffalo => `
+            pending.map(
+                buffalo => `
 
 <tr>
-
 
 <td>
 
     <strong>
+
         ${esc(
             buffalo.name
         )}
+
     </strong>
 
 </td>
@@ -879,13 +873,10 @@ function renderPending() {
 
 </td>
 
-
 </tr>
 
 `
-                )
-
-                .join("");
+            ).join("");
 
     }
 
@@ -913,7 +904,7 @@ function renderPending() {
 
 
 /* ==========================================================
-   DASHBOARD METRICS
+   METRICS
 ========================================================== */
 
 function renderMetrics() {
@@ -991,9 +982,7 @@ function renderMetrics() {
    AUDIT SNAPSHOT
 ========================================================== */
 
-function auditSnapshot(
-    record
-) {
+function auditSnapshot(record) {
 
     if (!record)
 
@@ -1024,11 +1013,9 @@ function auditSnapshot(
 
         days_elapsed_birth:
             record.birth_date
-
                 ? daysElapsed(
                     record.birth_date
                 )
-
                 : null,
 
         status:
@@ -1040,8 +1027,7 @@ function auditSnapshot(
 
 
 /* ==========================================================
-   WRITE AUDIT
-   OLD RECORD + NEW RECORD
+   WRITE AUDIT LOG
 ========================================================== */
 
 async function writeAudit(
@@ -1068,191 +1054,93 @@ async function writeAudit(
 
     const { error } =
         await supabaseClient
-
-            .from(
-                "audit_logs"
-            )
-
+            .from("audit_logs")
             .insert({
 
                 changed_by:
                     currentUser,
 
-
                 record_id:
-
                     newData?.record_id ||
-
                     oldData?.record_id ||
-
-
                     null,
-
-
-                /* CURRENT / MAIN VALUES */
 
                 name:
-
                     newData?.name ||
-
                     oldData?.name ||
-
                     null,
-
 
                 insurance_number:
-
                     newData?.insurance_number ||
-
                     oldData?.insurance_number ||
-
                     null,
-
 
                 insemination_date:
-
                     newData?.insemination_date ||
-
                     oldData?.insemination_date ||
-
                     null,
-
 
                 days_elapsed_from_insemination:
-
-                    newData
-                        ?.days_elapsed_from_insemination
-
-                    ??
-
-                    oldData
-                        ?.days_elapsed_from_insemination
-
-                    ??
-
+                    newData?.days_elapsed_from_insemination ??
+                    oldData?.days_elapsed_from_insemination ??
                     null,
-
 
                 birth_date:
-
                     newData?.birth_date ||
-
                     oldData?.birth_date ||
-
                     null,
-
 
                 days_elapsed_birth:
-
-                    newData
-                        ?.days_elapsed_birth
-
-                    ??
-
-                    oldData
-                        ?.days_elapsed_birth
-
-                    ??
-
+                    newData?.days_elapsed_birth ??
+                    oldData?.days_elapsed_birth ??
                     null,
-
 
                 status:
-
                     newData?.status ||
-
                     oldData?.status ||
-
                     null,
-
 
                 action:
-
-
                     action,
 
-
-                /* =================================
-                   OLD VALUES
-                ================================= */
-
                 old_name:
-
                     oldData?.name ||
-
                     null,
-
 
                 old_insurance_number:
-
-                    oldData
-                        ?.insurance_number ||
-
+                    oldData?.insurance_number ||
                     null,
-
 
                 old_insemination_date:
-
-                    oldData
-                        ?.insemination_date ||
-
+                    oldData?.insemination_date ||
                     null,
-
 
                 old_birth_date:
-
-                    oldData
-                        ?.birth_date ||
-
+                    oldData?.birth_date ||
                     null,
-
 
                 old_status:
-
                     oldData?.status ||
-
                     null,
-
-
-                /* =================================
-                   NEW VALUES
-                ================================= */
 
                 new_name:
-
                     newData?.name ||
-
                     null,
-
 
                 new_insurance_number:
-
-                    newData
-                        ?.insurance_number ||
-
+                    newData?.insurance_number ||
                     null,
-
 
                 new_insemination_date:
-
-                    newData
-                        ?.insemination_date ||
-
+                    newData?.insemination_date ||
                     null,
-
 
                 new_birth_date:
-
-                    newData
-                        ?.birth_date ||
-
+                    newData?.birth_date ||
                     null,
 
-
                 new_status:
-
                     newData?.status ||
-
                     null
 
             });
@@ -1266,7 +1154,7 @@ async function writeAudit(
 
 
 /* ==========================================================
-   CREATE / EDIT DAILY RECORD
+   DAILY RECORD FORM
 ========================================================== */
 
 if ($("recordForm")) {
@@ -1317,10 +1205,6 @@ if ($("recordForm")) {
                     $("birthDate")
                         .value;
 
-
-                /* =================================
-                   AT LEAST ONE DATE REQUIRED
-                ================================= */
 
                 if (
                     !inseminationDate &&
@@ -1386,18 +1270,11 @@ if ($("recordForm")) {
                 try {
 
 
-                    /* =================================
-                       EDIT
-                    ================================= */
+                    /* ==========================================
+                       EDIT DAILY RECORD
+                    ========================================== */
 
                     if (editId) {
-
-
-                        /*
-                           IMPORTANT:
-                           Capture original record
-                           BEFORE updating it.
-                        */
 
                         const oldRecord =
                             records.find(
@@ -1416,32 +1293,21 @@ if ($("recordForm")) {
                         }
 
 
-                        /*
-                           Update database
-                        */
-
                         const {
                             data: updated,
                             error
                         } =
 
                             await supabaseClient
-
                                 .from(
                                     "buffalo_records"
                                 )
-
-                                .update(
-                                    data
-                                )
-
+                                .update(data)
                                 .eq(
                                     "id",
                                     editId
                                 )
-
                                 .select()
-
                                 .single();
 
 
@@ -1449,10 +1315,6 @@ if ($("recordForm")) {
 
                             throw error;
 
-
-                        /*
-                           SAVE OLD + NEW
-                        */
 
                         await writeAudit(
                             "EDIT",
@@ -1468,27 +1330,21 @@ if ($("recordForm")) {
                     }
 
 
-                    /* =================================
-                       CREATE
-                    ================================= */
+                    /* ==========================================
+                       CREATE DAILY RECORD
+                    ========================================== */
 
                     else {
 
-
                         const {
-
                             data: created,
-
                             error
-
                         } =
 
                             await supabaseClient
-
                                 .from(
                                     "buffalo_records"
                                 )
-
                                 .insert({
 
                                     ...data,
@@ -1497,9 +1353,7 @@ if ($("recordForm")) {
                                         currentUser
 
                                 })
-
                                 .select()
-
                                 .single();
 
 
@@ -1507,12 +1361,6 @@ if ($("recordForm")) {
 
                             throw error;
 
-
-                        /*
-                           CREATE:
-                           no old value,
-                           only new value.
-                        */
 
                         await writeAudit(
                             "CREATE",
@@ -1529,7 +1377,6 @@ if ($("recordForm")) {
 
 
                     resetRecordForm();
-
 
                     await loadAll();
 
@@ -1568,7 +1415,7 @@ if ($("recordForm")) {
 
 
 /* ==========================================================
-   EDIT RECORD
+   EDIT DAILY RECORD
 ========================================================== */
 
 window.editRecord =
@@ -1586,8 +1433,7 @@ function(id) {
         return;
 
 
-    let buffalo =
-
+    const buffalo =
         record.buffalo_id
 
             ? registry.find(
@@ -1641,11 +1487,6 @@ function(id) {
         "";
 
 
-    /*
-       Status becomes editable
-       ONLY after Edit is clicked.
-    */
-
     $("recordStatus")
         .value =
         makeStatus(record);
@@ -1671,15 +1512,19 @@ function(id) {
             );
 
 
-    $("saveBtn")
-        .textContent =
-        "Update Entry →";
+    if ($("saveBtn"))
+
+        $("saveBtn")
+            .textContent =
+            "Update Entry →";
 
 
-    $("cancelEdit")
-        .classList.remove(
-            "hidden"
-        );
+    if ($("cancelEdit"))
+
+        $("cancelEdit")
+            .classList.remove(
+                "hidden"
+            );
 
 
     window.scrollTo({
@@ -1694,7 +1539,7 @@ function(id) {
 
 
 /* ==========================================================
-   RESET RECORD FORM
+   RESET DAILY RECORD FORM
 ========================================================== */
 
 function resetRecordForm() {
@@ -1708,29 +1553,32 @@ function resetRecordForm() {
         .reset();
 
 
-    $("editId")
-        .value =
-        "";
+    if ($("editId"))
+
+        $("editId")
+            .value =
+            "";
 
 
-    $("insuranceNumber")
-        .value =
-        "";
+    if ($("insuranceNumber"))
+
+        $("insuranceNumber")
+            .value =
+            "";
 
 
-    /*
-       Default status is Pending,
-       but DISABLED.
-    */
+    if ($("recordStatus")) {
 
-    $("recordStatus")
-        .value =
-        "Pending";
+        $("recordStatus")
+            .value =
+            "Pending";
 
 
-    $("recordStatus")
-        .disabled =
-        true;
+        $("recordStatus")
+            .disabled =
+            true;
+
+    }
 
 
     if ($("formTitle"))
@@ -1748,20 +1596,26 @@ function resetRecordForm() {
             );
 
 
-    $("saveBtn")
-        .textContent =
-        "Save Entry →";
+    if ($("saveBtn"))
+
+        $("saveBtn")
+            .textContent =
+            "Save Entry →";
 
 
-    $("cancelEdit")
-        .classList.add(
-            "hidden"
-        );
+    if ($("cancelEdit"))
+
+        $("cancelEdit")
+            .classList.add(
+                "hidden"
+            );
 
 }
 
 
-/* Cancel edit */
+/* ==========================================================
+   CANCEL DAILY RECORD EDIT
+========================================================== */
 
 if ($("cancelEdit")) {
 
@@ -1793,49 +1647,54 @@ function(id) {
         return;
 
 
-    /*
-       New record
-    */
+    if ($("editId"))
 
-    $("editId")
-        .value =
-        "";
+        $("editId")
+            .value =
+            "";
 
 
-    $("buffaloSelect")
-        .value =
-        buffalo.id;
+    if ($("buffaloSelect"))
+
+        $("buffaloSelect")
+            .value =
+            buffalo.id;
 
 
-    $("insuranceNumber")
-        .value =
-        buffalo.insurance_number ||
-        "";
+    if ($("insuranceNumber"))
+
+        $("insuranceNumber")
+            .value =
+            buffalo.insurance_number ||
+            "";
 
 
-    $("inseminationDate")
-        .value =
-        "";
+    if ($("inseminationDate"))
+
+        $("inseminationDate")
+            .value =
+            "";
 
 
-    $("birthDate")
-        .value =
-        "";
+    if ($("birthDate"))
+
+        $("birthDate")
+            .value =
+            "";
 
 
-    /*
-       Status is NOT editable
-       until Edit.
-    */
+    if ($("recordStatus")) {
 
-    $("recordStatus")
-        .value =
-        "Pending";
+        $("recordStatus")
+            .value =
+            "Pending";
 
 
-    $("recordStatus")
-        .disabled =
-        true;
+        $("recordStatus")
+            .disabled =
+            true;
+
+    }
 
 
     if ($("formTitle"))
@@ -1853,20 +1712,20 @@ function(id) {
             );
 
 
-    $("saveBtn")
-        .textContent =
-        "Save Entry →";
+    if ($("saveBtn"))
+
+        $("saveBtn")
+            .textContent =
+            "Save Entry →";
 
 
-    $("cancelEdit")
-        .classList.add(
-            "hidden"
-        );
+    if ($("cancelEdit"))
 
+        $("cancelEdit")
+            .classList.add(
+                "hidden"
+            );
 
-    /*
-       Open Daily Records tab
-    */
 
     const recordsTab =
         document.querySelector(
@@ -1920,13 +1779,6 @@ async function(id) {
 
     try {
 
-
-        /*
-           IMPORTANT:
-           Save complete old record
-           BEFORE deletion.
-        */
-
         await writeAudit(
             "DELETE",
             record,
@@ -1939,13 +1791,10 @@ async function(id) {
         } =
 
             await supabaseClient
-
                 .from(
                     "buffalo_records"
                 )
-
                 .delete()
-
                 .eq(
                     "id",
                     id
@@ -1985,7 +1834,8 @@ async function(id) {
 
 
 /* ==========================================================
-   BUFFALO REGISTRY - ADD / EDIT
+   BUFFALO REGISTRY
+   ADD + EDIT
 ========================================================== */
 
 if ($("registryForm")) {
@@ -1997,13 +1847,19 @@ if ($("registryForm")) {
 
                 event.preventDefault();
 
+
                 const editId =
-                    $("registryEditId")?.value?.trim() || "";
+                    $("registryEditId")
+                        ?.value
+                        ?.trim() ||
+                    "";
+
 
                 const name =
                     $("registryName")
                         .value
                         .trim();
+
 
                 const insurance =
                     $("registryInsurance")
@@ -2015,7 +1871,10 @@ if ($("registryForm")) {
                    VALIDATION
                 ========================================== */
 
-                if (!name || !insurance) {
+                if (
+                    !name ||
+                    !insurance
+                ) {
 
                     alert(
                         "Buffalo name and insurance number are required."
@@ -2029,6 +1888,7 @@ if ($("registryForm")) {
                 const button =
                     $("registrySaveBtn");
 
+
                 const originalText =
                     editId
                         ? "Update Buffalo →"
@@ -2037,7 +1897,9 @@ if ($("registryForm")) {
 
                 if (button) {
 
-                    button.disabled = true;
+                    button.disabled =
+                        true;
+
 
                     button.innerHTML =
                         editId
@@ -2051,23 +1913,28 @@ if ($("registryForm")) {
 
 
                     /* ==========================================
-                       EDIT EXISTING BUFFALO
+                       UPDATE EXISTING BUFFALO
                     ========================================== */
 
                     if (editId) {
 
+
                         const oldBuffalo =
                             registry.find(
                                 buffalo =>
-                                    String(buffalo.id) ===
-                                    String(editId)
+                                    String(
+                                        buffalo.id
+                                    ) ===
+                                    String(
+                                        editId
+                                    )
                             );
 
 
                         if (!oldBuffalo) {
 
                             throw new Error(
-                                "The buffalo could not be found in the current registry."
+                                "The buffalo could not be found."
                             );
 
                         }
@@ -2075,16 +1942,24 @@ if ($("registryForm")) {
 
                         /*
                          * IMPORTANT:
-                         * Update registry and RETURN the
-                         * actual updated database row.
+                         *
+                         * Do NOT use:
+                         *
+                         * .select("*").single()
+                         *
+                         * here.
+                         *
+                         * Your previous error:
+                         *
+                         * Cannot coerce the result
+                         * to a single JSON object
+                         *
+                         * came from that response handling.
                          */
 
                         const {
-
-                            data: updatedBuffalo,
-
-                            error
-
+                            error:
+                                registryUpdateError
                         } =
 
                             await supabaseClient
@@ -2106,24 +1981,14 @@ if ($("registryForm")) {
                                 .eq(
                                     "id",
                                     editId
-                                )
-
-                                .select("*")
-                                .single();
+                                );
 
 
-                        if (error)
+                        if (
+                            registryUpdateError
+                        )
 
-                            throw error;
-
-
-                        if (!updatedBuffalo) {
-
-                            throw new Error(
-                                "Supabase did not return the updated buffalo."
-                            );
-
-                        }
+                            throw registryUpdateError;
 
 
                         /* ==========================================
@@ -2131,12 +1996,8 @@ if ($("registryForm")) {
                         ========================================== */
 
                         const {
-
-                            data: linkedRecords,
-
                             error:
-                                linkedRecordsError
-
+                                recordsUpdateError
                         } =
 
                             await supabaseClient
@@ -2161,28 +2022,26 @@ if ($("registryForm")) {
                                 .eq(
                                     "buffalo_id",
                                     editId
-                                )
-
-                                .select("*");
+                                );
 
 
-                        if (linkedRecordsError)
+                        if (
+                            recordsUpdateError
+                        )
 
-                            throw linkedRecordsError;
+                            throw recordsUpdateError;
 
 
                         /* ==========================================
-                           RESET FORM
+                           RESET REGISTRY FORM
                         ========================================== */
 
                         resetRegistryForm();
 
 
-                        /*
-                         * Reload directly from Supabase.
-                         * This ensures UI is showing database
-                         * values, not stale JavaScript values.
-                         */
+                        /* ==========================================
+                           RELOAD EVERYTHING
+                        ========================================== */
 
                         await loadAll();
 
@@ -2200,12 +2059,10 @@ if ($("registryForm")) {
 
                     else {
 
+
                         const {
-
-                            data: createdBuffalo,
-
-                            error
-
+                            error:
+                                insertError
                         } =
 
                             await supabaseClient
@@ -2225,24 +2082,12 @@ if ($("registryForm")) {
                                     added_by:
                                         currentUser
 
-                                })
-
-                                .select("*")
-                                .single();
+                                });
 
 
-                        if (error)
+                        if (insertError)
 
-                            throw error;
-
-
-                        if (!createdBuffalo) {
-
-                            throw new Error(
-                                "Buffalo was not returned after insertion."
-                            );
-
-                        }
+                            throw insertError;
 
 
                         resetRegistryForm();
@@ -2270,7 +2115,10 @@ if ($("registryForm")) {
 
                     alert(
                         "Could not save the buffalo.\n\n" +
-                        (error?.message || error)
+                        (
+                            error?.message ||
+                            error
+                        )
                     );
 
                 }
@@ -2282,6 +2130,7 @@ if ($("registryForm")) {
 
                         button.disabled =
                             false;
+
 
                         button.innerHTML =
                             originalText;
@@ -2305,6 +2154,7 @@ function resetRegistryForm() {
     const form =
         $("registryForm");
 
+
     if (form)
 
         form.reset();
@@ -2313,52 +2163,74 @@ function resetRegistryForm() {
     if ($("registryEditId"))
 
         $("registryEditId")
-            .value = "";
+            .value =
+            "";
 
 
     if ($("registrySaveBtn"))
 
         $("registrySaveBtn")
             .innerHTML =
-                "Add to Master List <span>→</span>";
+            "Add to Master List <span>→</span>";
 
 
     if ($("registryCancelEdit"))
 
         $("registryCancelEdit")
-            .classList.add("hidden");
+            .classList.add(
+                "hidden"
+            );
 
 
     if ($("registryEditActions"))
 
         $("registryEditActions")
-            .classList.add("hidden");
+            .classList.add(
+                "hidden"
+            );
 
 
-    /*
-     * Remove edit styling if we add any later.
-     */
+    const registryHeading =
+        document.querySelector(
+            "#registryForm"
+        )
+        ?.closest(
+            ".form-card"
+        )
+        ?.querySelector(
+            "h2"
+        );
 
-    if ($("registryName"))
 
-        $("registryName")
-            .focus();
+    if (registryHeading)
+
+        registryHeading.textContent =
+            "Register Buffalo";
 
 }
 
 
 /* ==========================================================
-   EDIT REGISTRY
+   EDIT BUFFALO REGISTRY
 ========================================================== */
 
 window.editRegistry =
 function(id) {
 
+    /*
+     * Find the buffalo from the currently
+     * loaded Supabase data.
+     */
+
     const buffalo =
         registry.find(
             item =>
-                String(item.id) ===
-                String(id)
+                String(
+                    item.id
+                ) ===
+                String(
+                    id
+                )
         );
 
 
@@ -2374,32 +2246,41 @@ function(id) {
 
 
     /*
-     * Put the selected buffalo into the
-     * SAME form used for adding.
+     * Store ID in hidden input.
      */
 
     $("registryEditId")
         .value =
-            buffalo.id;
-
-
-    $("registryName")
-        .value =
-            buffalo.name || "";
-
-
-    $("registryInsurance")
-        .value =
-            buffalo.insurance_number || "";
+        buffalo.id;
 
 
     /*
-     * Change button to UPDATE mode.
+     * Load existing name.
+     */
+
+    $("registryName")
+        .value =
+        buffalo.name ||
+        "";
+
+
+    /*
+     * Load existing insurance number.
+     */
+
+    $("registryInsurance")
+        .value =
+        buffalo.insurance_number ||
+        "";
+
+
+    /*
+     * Change button.
      */
 
     $("registrySaveBtn")
         .innerHTML =
-            "Update Buffalo <span>✓</span>";
+        "Update Buffalo <span>✓</span>";
 
 
     /*
@@ -2407,22 +2288,31 @@ function(id) {
      */
 
     $("registryCancelEdit")
-        .classList.remove("hidden");
+        .classList.remove(
+            "hidden"
+        );
 
 
     $("registryEditActions")
-        .classList.remove("hidden");
+        .classList.remove(
+            "hidden"
+        );
 
 
     /*
-     * Change heading text if the element exists.
+     * Change heading.
      */
 
     const registryHeading =
         document.querySelector(
             "#registryForm"
-        )?.closest(".form-card")
-        ?.querySelector("h2");
+        )
+        ?.closest(
+            ".form-card"
+        )
+        ?.querySelector(
+            "h2"
+        );
 
 
     if (registryHeading)
@@ -2432,7 +2322,7 @@ function(id) {
 
 
     /*
-     * Scroll to the form.
+     * Scroll to Registry form.
      */
 
     $("registryForm")
@@ -2443,7 +2333,7 @@ function(id) {
 
 
     /*
-     * Put cursor in name field.
+     * Focus name field.
      */
 
     setTimeout(
@@ -2472,26 +2362,14 @@ if ($("registryCancelEdit")) {
 
                 resetRegistryForm();
 
-
-                const registryHeading =
-                    document.querySelector(
-                        "#registryForm"
-                    )?.closest(".form-card")
-                    ?.querySelector("h2");
-
-
-                if (registryHeading)
-
-                    registryHeading.textContent =
-                        "Register Buffalo";
-
             }
         );
 
 }
 
+
 /* ==========================================================
-   RENDER REGISTRY
+   RENDER BUFFALO REGISTRY
 ========================================================== */
 
 function renderRegistry() {
@@ -2533,10 +2411,8 @@ function renderRegistry() {
     $("registryBody")
         .innerHTML =
 
-        filtered
-
-            .map(
-                buffalo => `
+        filtered.map(
+            buffalo => `
 
 <tr>
 
@@ -2607,9 +2483,7 @@ function renderRegistry() {
 </tr>
 
 `
-            )
-
-            .join("");
+        ).join("");
 
 
     if ($("emptyRegistry")) {
@@ -2626,130 +2500,7 @@ function renderRegistry() {
 
 
 /* ==========================================================
-   EDIT REGISTRY
-========================================================== */
-
-window.editRegistry =
-async function(id) {
-
-    const buffalo =
-        registry.find(
-            item =>
-                item.id === id
-        );
-
-
-    if (!buffalo)
-
-        return;
-
-
-    const newName =
-        prompt(
-            "Buffalo name:",
-            buffalo.name
-        );
-
-
-    if (
-        newName === null
-    )
-
-        return;
-
-
-    const newInsurance =
-        prompt(
-            "Insurance number:",
-            buffalo.insurance_number ||
-            ""
-        );
-
-
-    if (
-        newInsurance === null
-    )
-
-        return;
-
-
-    if (
-        !newName.trim() ||
-        !newInsurance.trim()
-    ) {
-
-        alert(
-            "Name and insurance number cannot be empty."
-        );
-
-        return;
-
-    }
-
-
-    try {
-
-
-        const {
-            error
-        } =
-
-            await supabaseClient
-
-                .from(
-                    "buffalo_registry"
-                )
-
-                .update({
-
-                    name:
-                        newName.trim(),
-
-                    insurance_number:
-                        newInsurance.trim()
-
-                })
-
-                .eq(
-                    "id",
-                    id
-                );
-
-
-        if (error)
-
-            throw error;
-
-
-        await loadAll();
-
-
-        toast(
-            "Registry entry updated."
-        );
-
-    }
-
-
-    catch (error) {
-
-        console.error(
-            error
-        );
-
-
-        alert(
-            "Could not update registry.\n\n" +
-            error.message
-        );
-
-    }
-
-};
-
-
-/* ==========================================================
-   DELETE REGISTRY
+   DELETE BUFFALO FROM REGISTRY
 ========================================================== */
 
 window.deleteRegistry =
@@ -2768,9 +2519,9 @@ async function(id) {
 
 
     /*
-       Do not allow removal
-       while actively tracked.
-    */
+     * Don't remove a buffalo while
+     * it has an active daily record.
+     */
 
     if (
         isRegistryTracked(
@@ -2849,7 +2600,9 @@ async function(id) {
 };
 
 
-/* Registry search */
+/* ==========================================================
+   REGISTRY SEARCH
+========================================================== */
 
 if ($("registrySearch")) {
 
@@ -2863,7 +2616,7 @@ if ($("registrySearch")) {
 
 
 /* ==========================================================
-   AUDIT LOGS
+   RENDER AUDIT LOGS
 ========================================================== */
 
 function renderAudit() {
@@ -2895,10 +2648,8 @@ function renderAudit() {
     $("auditBody")
         .innerHTML =
 
-        filtered
-
-            .map(
-                log => `
+        filtered.map(
+            log => `
 
 <tr>
 
@@ -3025,11 +2776,12 @@ function renderAudit() {
 
                 </button>
 
-              `
+            `
 
             : ""
 
     }
+
 
 </td>
 
@@ -3037,9 +2789,7 @@ function renderAudit() {
 </tr>
 
 `
-            )
-
-            .join("");
+        ).join("");
 
 
     if ($("emptyAudit")) {
@@ -3055,7 +2805,9 @@ function renderAudit() {
 }
 
 
-/* Audit search */
+/* ==========================================================
+   AUDIT SEARCH
+========================================================== */
 
 if ($("auditSearch")) {
 
@@ -3069,7 +2821,7 @@ if ($("auditSearch")) {
 
 
 /* ==========================================================
-   VIEW OLD → NEW AUDIT CHANGES
+   VIEW AUDIT CHANGES
 ========================================================== */
 
 window.viewAuditChanges =
@@ -3081,10 +2833,14 @@ function(id) {
                 item.id === id
         );
 
+
     if (!log)
+
         return;
 
+
     const changes = [];
+
 
     function formatValue(value) {
 
@@ -3092,43 +2848,87 @@ function(id) {
             value === null ||
             value === undefined ||
             value === ""
-        ) {
-            return "—";
-        }
+        )
 
-        return esc(String(value));
+            return "—";
+
+
+        return esc(
+            String(value)
+        );
+
     }
 
-    function addChange(field, oldValue, newValue) {
 
-        const oldRaw = oldValue ?? "";
-        const newRaw = newValue ?? "";
+    function addChange(
+        field,
+        oldValue,
+        newValue
+    ) {
 
-        if (oldRaw !== newRaw) {
+        const oldRaw =
+            oldValue ?? "";
+
+
+        const newRaw =
+            newValue ?? "";
+
+
+        if (
+            oldRaw !==
+            newRaw
+        ) {
 
             changes.push(`
-                <tr>
-                    <td class="audit-change-field">
-                        ${field}
-                    </td>
 
-                    <td class="audit-old-value">
-                        <span class="audit-value-label">
-                            Previous
-                        </span>
-                        ${formatValue(oldValue)}
-                    </td>
+<tr>
 
-                    <td class="audit-new-value">
-                        <span class="audit-value-label">
-                            Updated
-                        </span>
-                        ${formatValue(newValue)}
-                    </td>
-                </tr>
-            `);
+
+<td class="audit-change-field">
+
+    ${field}
+
+</td>
+
+
+<td class="audit-old-value">
+
+    <span class="audit-value-label">
+
+        Previous
+
+    </span>
+
+    ${formatValue(
+        oldValue
+    )}
+
+</td>
+
+
+<td class="audit-new-value">
+
+    <span class="audit-value-label">
+
+        Updated
+
+    </span>
+
+    ${formatValue(
+        newValue
+    )}
+
+</td>
+
+
+</tr>
+
+`);
+
         }
+
     }
+
 
     addChange(
         "Buffalo Name",
@@ -3136,31 +2936,43 @@ function(id) {
         log.new_name
     );
 
+
     addChange(
         "Insurance Number",
         log.old_insurance_number,
         log.new_insurance_number
     );
 
+
     addChange(
         "Insemination Date",
         log.old_insemination_date
-            ? formatDate(log.old_insemination_date)
+            ? formatDate(
+                log.old_insemination_date
+            )
             : null,
         log.new_insemination_date
-            ? formatDate(log.new_insemination_date)
+            ? formatDate(
+                log.new_insemination_date
+            )
             : null
     );
+
 
     addChange(
         "Birth Date",
         log.old_birth_date
-            ? formatDate(log.old_birth_date)
+            ? formatDate(
+                log.old_birth_date
+            )
             : null,
         log.new_birth_date
-            ? formatDate(log.new_birth_date)
+            ? formatDate(
+                log.new_birth_date
+            )
             : null
     );
+
 
     addChange(
         "Status",
@@ -3168,78 +2980,141 @@ function(id) {
         log.new_status
     );
 
-    const content = $("auditChangesContent");
+
+    const content =
+        $("auditChangesContent");
+
 
     if (!content)
+
         return;
 
-    if (changes.length === 0) {
+
+    if (
+        changes.length ===
+        0
+    ) {
 
         content.innerHTML = `
-            <div class="audit-no-change">
-                No field values changed.
-            </div>
-        `;
 
-    } else {
+<div class="audit-no-change">
 
-        content.innerHTML = `
-            <table class="audit-change-table">
-                <thead>
-                    <tr>
-                        <th>Field</th>
-                        <th>Previous Value</th>
-                        <th>Updated Value</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${changes.join("")}
-                </tbody>
-            </table>
-        `;
+    No field values changed.
+
+</div>
+
+`;
+
     }
 
-    const modal = $("auditModal");
+
+    else {
+
+        content.innerHTML = `
+
+<table class="audit-change-table">
+
+<thead>
+
+<tr>
+
+<th>
+    Field
+</th>
+
+<th>
+    Previous Value
+</th>
+
+<th>
+    Updated Value
+</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+${changes.join("")}
+
+</tbody>
+
+</table>
+
+`;
+
+    }
+
+
+    const modal =
+        $("auditModal");
+
 
     if (!modal)
+
         return;
 
-    modal.classList.remove("hidden");
 
-    document.body.style.overflow = "hidden";
+    modal.classList.remove(
+        "hidden"
+    );
+
+
+    document.body.style.overflow =
+        "hidden";
+
 };
 
 
-/* Close audit modal */
+/* ==========================================================
+   CLOSE AUDIT MODAL
+========================================================== */
 
 window.closeAuditModal =
 function() {
 
-    const modal = $("auditModal");
+    const modal =
+        $("auditModal");
 
-    if (modal) {
-        modal.classList.add("hidden");
-    }
 
-    document.body.style.overflow = "";
+    if (modal)
+
+        modal.classList.add(
+            "hidden"
+        );
+
+
+    document.body.style.overflow =
+        "";
+
 };
 
 
-/* Close audit modal with Escape */
+/* ==========================================================
+   ESCAPE CLOSE MODAL
+========================================================== */
 
 document.addEventListener(
     "keydown",
     event => {
 
-        if (event.key === "Escape") {
+        if (
+            event.key ===
+            "Escape"
+        ) {
+
             closeAuditModal();
+
         }
 
     }
 );
 
+
 /* ==========================================================
-   EXPORT AUDIT LOGS
+   EXPORT AUDIT
 ========================================================== */
 
 if ($("exportAudit")) {
@@ -3296,7 +3171,6 @@ if ($("exportAudit")) {
 
 
                 const rows =
-
                     auditLogs.map(
                         log => [
 
@@ -3328,12 +3202,7 @@ if ($("exportAudit")) {
 
                             log.action,
 
-
-                            /* OLD */
-
                             log.old_name,
-
-                            /* NEW */
 
                             log.new_name,
 
@@ -3386,12 +3255,11 @@ if ($("exportAudit")) {
                                                 '"',
                                                 '""'
                                             )}"`
-                                    )
 
+                                    )
                                     .join(",")
 
                         )
-
                         .join("\n");
 
 
@@ -3458,7 +3326,7 @@ if ($("recordSearch")) {
 
 
 /* ==========================================================
-   TABS
+   NAVIGATION TABS
 ========================================================== */
 
 document
@@ -3468,20 +3336,18 @@ document
     .forEach(
         button => {
 
-
             button.addEventListener(
                 "click",
                 () => {
-
 
                     const target =
                         button.dataset.tab;
 
 
                     /*
-                       Only karthiknani
-                       can open Audit Logs.
-                    */
+                     * Audit Logs only for
+                     * karthiknani.
+                     */
 
                     if (
 
@@ -3502,36 +3368,28 @@ document
 
 
                     document
-
                         .querySelectorAll(
                             ".nav-tab"
                         )
-
                         .forEach(
                             b =>
-
                                 b.classList.toggle(
                                     "active",
                                     b === button
                                 )
-
                         );
 
 
                     document
-
                         .querySelectorAll(
                             ".tab-content"
                         )
-
                         .forEach(
                             section =>
-
                                 section.classList.toggle(
                                     "active",
                                     section.id === target
                                 )
-
                         );
 
 
@@ -3551,7 +3409,7 @@ document
 
 
 /* ==========================================================
-   USER ENTRY
+   ENTER WEBSITE
 ========================================================== */
 
 async function enterSite() {
@@ -3612,11 +3470,6 @@ async function enterSite() {
         );
 
 
-    /*
-       Audit Logs visible ONLY
-       to karthiknani.
-    */
-
     const isAuditUser =
         normalized(
             currentUser
@@ -3638,6 +3491,7 @@ async function enterSite() {
         await loadAll();
 
     }
+
 
     catch (error) {
 
@@ -3661,7 +3515,9 @@ async function enterSite() {
 }
 
 
-/* Welcome form */
+/* ==========================================================
+   WELCOME FORM
+========================================================== */
 
 if ($("welcomeForm")) {
 
@@ -3680,7 +3536,9 @@ if ($("welcomeForm")) {
 }
 
 
-/* Change user */
+/* ==========================================================
+   CHANGE USER
+========================================================== */
 
 if ($("changeUser")) {
 
@@ -3698,7 +3556,7 @@ if ($("changeUser")) {
 
 
 /* ==========================================================
-   START
+   INITIAL FOCUS
 ========================================================== */
 
 if ($("viewerName")) {
