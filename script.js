@@ -127,6 +127,67 @@ function daysElapsed(dateString) {
 
 }
 
+/* ==========================================================
+   FORMAT ELAPSED TIME AS MONTHS + DAYS
+   Example:
+   27-07-2026 → 1m 23d
+   09-12-2025 → 9m 10d
+   19-03-2026 → 6m
+========================================================== */
+
+function formatElapsedDuration(dateString) {
+
+    if (!dateString)
+        return "N/A";
+
+    const start = new Date(
+        dateString + "T00:00:00"
+    );
+
+    if (Number.isNaN(start.getTime()))
+        return "N/A";
+
+    const today = todayStart();
+
+    if (start > today)
+        return "0d";
+
+    let months =
+        (today.getFullYear() - start.getFullYear()) * 12 +
+        (today.getMonth() - start.getMonth());
+
+    const monthDate = new Date(start);
+
+    monthDate.setMonth(
+        monthDate.getMonth() + months
+    );
+
+    if (monthDate > today) {
+
+        months--;
+
+        monthDate.setMonth(
+            monthDate.getMonth() - 1
+        );
+    }
+
+    const remainingDays =
+        Math.floor(
+            (today.getTime() - monthDate.getTime()) /
+            86400000
+        );
+
+    if (months > 0 && remainingDays > 0) {
+        return `${months}m ${remainingDays}d`;
+    }
+
+    if (months > 0) {
+        return `${months}m`;
+    }
+
+    return `${remainingDays}d`;
+}
+
 
 /* ==========================================================
    FORMAT DATE
@@ -661,19 +722,15 @@ function renderRecords() {
 
 
                 const inseminationDays =
-                    daysElapsed(
+                    formatElapsedDuration(
                         record.insemination_date
                     );
 
 
                 const birthDays =
-                    record.birth_date
-
-                        ? daysElapsed(
-                            record.birth_date
-                        )
-
-                        : null;
+    formatElapsedDuration(
+        record.birth_date
+    );
 
 
                 return `
@@ -714,9 +771,8 @@ function renderRecords() {
 <td>
 
     ${
-        inseminationDays ??
-        "—"
-    }
+    inseminationDays
+}
 
 </td>
 
@@ -732,10 +788,9 @@ function renderRecords() {
 
 <td>
 
-    ${
-        birthDays ??
-        "—"
-    }
+   ${
+    birthDays
+}
 
 </td>
 
