@@ -13,26 +13,26 @@
 </head>
 <body>
 
-<div id="welcomeScreen" class="welcome-screen">
+<div id="welcomeScreen" class="welcome-screen hidden">
   <div class="welcome-orb orb-a"></div>
   <div class="welcome-orb orb-b"></div>
   <div class="welcome-panel">
     <div class="brand-badge">ASKA</div>
     <div class="welcome-icon">🐃</div>
     <div class="eyebrow">DAIRY OPERATIONS</div>
-    <h1>Welcome to ASKA Dairy Farm</h1>
-    <p>Daily insemination, birth and livestock tracking — all in one place.</p>
+    <h1>ASKA Dairy Farm Login</h1>
+    <p>Enter your name to access the dairy management system.</p>
     <form id="welcomeForm">
       <label for="viewerName">Your name</label>
       <input id="viewerName" autocomplete="name" maxlength="60" placeholder="Enter your name" required>
       <div id="nameError" class="field-error"></div>
-      <button class="btn btn-primary btn-lg" type="submit">Continue <span>→</span></button>
+      <button class="btn btn-primary btn-lg" type="submit">Login <span>→</span></button>
     </form>
-    <div class="welcome-footer">Shared dairy records • Cloud connected</div>
+    <div class="welcome-footer">Authorized access • Cloud connected</div>
   </div>
 </div>
 
-<div id="app" class="hidden">
+<div id="app">
 
 <header class="app-header">
   <div class="header-inner">
@@ -45,10 +45,11 @@
     </div>
     <div class="header-right">
       <div class="sync-status"><span class="pulse"></span><span>Cloud synced</span></div>
-      <div class="user-menu">
+      <button id="loginButton" class="btn btn-primary header-login-btn" type="button" onclick="openLogin()">🔐 Login</button>
+      <div id="userMenu" class="user-menu hidden">
         <div class="avatar" id="userAvatar">U</div>
         <div class="user-copy"><strong id="currentUser"></strong><span>Operator</span></div>
-        <button id="changeUser" class="icon-btn" title="Change user">↪</button>
+        <button id="changeUser" class="icon-btn" title="Logout">↪</button>
       </div>
     </div>
   </div>
@@ -59,7 +60,7 @@
     <button class="nav-tab active" data-tab="records">
       <span class="nav-icon">▦</span> Daily Records
     </button>
-    <button class="nav-tab" data-tab="registry">
+    <button id="registryNav" class="nav-tab" data-tab="registry">
       <span class="nav-icon">♙</span> Buffalo Registry
     </button>
     <button id="auditNav" class="nav-tab hidden" data-tab="audit">
@@ -104,7 +105,7 @@
     </div>
   </div>
 
-  <div class="card form-card">
+  <div id="recordEntryCard" class="card form-card">
     <div class="card-heading">
       <div>
         <div class="section-kicker">ENTRY</div>
@@ -180,7 +181,7 @@
             <th>Birth Date</th>
             <th>Days Elapsed From Birth</th>
             <th>Status</th>
-            <th>Action</th>
+            <th id="recordsActionHeader">Action</th>
           </tr>
         </thead>
         <tbody id="recordsBody"></tbody>
@@ -193,7 +194,7 @@
     </div>
   </div>
 
-  <div class="section-heading-row pending-heading">
+  <div id="pendingSectionHeading" class="section-heading-row pending-heading">
     <div>
       <div class="section-kicker danger-kicker">ATTENTION REQUIRED</div>
       <h2>Pending Animals <span>(Not Yet Tracked)</span></h2>
@@ -202,7 +203,7 @@
     <div class="pending-count" id="pendingCount">0 pending</div>
   </div>
 
-  <div class="card table-card pending-card">
+  <div id="pendingSectionCard" class="card table-card pending-card">
     <div class="table-wrap">
       <table class="data-table">
         <thead>
@@ -232,12 +233,12 @@
     <div>
       <div class="eyebrow">MASTER DATA</div>
       <h1>Buffalo Registry</h1>
-      <p>Maintain the master list used throughout the dairy tracking system.</p>
+      <p>View the master buffalo list. Login is required to add or manage buffaloes.</p>
     </div>
     <div class="date-chip"><span>Total</span><strong id="registryTotal">0 buffaloes</strong></div>
   </div>
 
-  <div class="card form-card">
+  <div id="registryManagementCard" class="card form-card">
     <div class="card-heading">
       <div>
         <div class="section-kicker">MASTER LIST</div>
@@ -315,7 +316,7 @@
     <div>
       <div class="section-kicker">REGISTRY</div>
       <h2>Master Buffalo List</h2>
-      <p>Every name here becomes available in Daily Records.</p>
+      <p>Registered buffaloes used by the dairy tracking system.</p>
     </div>
     <div class="search-box">
       <span>⌕</span>
@@ -331,7 +332,7 @@
             <th>Name</th>
             <th>Insurance No</th>
             <th>Added By</th>
-            <th>Action</th>
+            <th id="registryActionHeader">Action</th>
           </tr>
         </thead>
         <tbody id="registryBody"></tbody>

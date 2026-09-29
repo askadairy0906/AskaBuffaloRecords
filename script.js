@@ -1,24 +1,44 @@
-/* ==========================================================
-   ASKA DAIRY FARM
-   SUPABASE + BUFFALO REGISTRY + DAILY RECORDS + AUDIT LOGS
-========================================================== */
+const API_BASE = "https://aska-dairy-api.kk862781.workers.dev";
 
+async function apiRequest(path, options = {}) {
 
-/* ==========================================================
-   SUPABASE
-========================================================== */
+    const method =
+        String(options.method || "GET").toUpperCase();
 
-const SUPABASE_URL =
-    "https://zmcsydaadxybnsxircti.supabase.co";
+    if (method !== "GET" && !isLoggedIn) {
+        throw new Error(
+            "Please login to perform this action."
+        );
+    }
 
-const SUPABASE_PUBLISHABLE_KEY =
-    "sb_publishable_U5p9tVbt7iqpUdkL0gcxEA_FAinSGsP";
-
-const supabaseClient =
-    window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_PUBLISHABLE_KEY
+    const response = await fetch(
+        API_BASE + path,
+        {
+            ...options,
+            headers: {
+                "Content-Type": "application/json",
+                ...(options.headers || {})
+            }
+        }
     );
+
+    let result = null;
+
+    try {
+        result = await response.json();
+    } catch (error) {
+        result = null;
+    }
+
+    if (!response.ok) {
+        throw new Error(
+            result?.error ||
+            `API request failed (${response.status})`
+        );
+    }
+
+    return result;
+}
 
 
 /* ==========================================================
@@ -26,63 +46,54 @@ const supabaseClient =
 ========================================================== */
 
 let records = [];
-
 let registry = [];
-
 let auditLogs = [];
 
 let currentUser = "";
+let isLoggedIn = false;
 
 
 /* ==========================================================
-   SHORT DOM HELPER
+   HELPERS
 ========================================================== */
 
 const $ = id =>
     document.getElementById(id);
 
 
-/* ==========================================================
-   ESCAPE HTML
-========================================================== */
-
 function esc(value) {
 
-    return String(value ?? "")
-        .replace(
-            /[&<>"']/g,
-            c => ({
-                "&": "&amp;",
-                "<": "&lt;",
-                ">": "&gt;",
-                '"': "&quot;",
-                "'": "&#039;"
-            }[c])
-        );
+    return String(
+        value ?? ""
+    ).replace(
+        /[&<>"']/g,
+        c => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+        }[c])
+    );
 
 }
 
 
-/* ==========================================================
-   NORMALIZE TEXT
-========================================================== */
-
 function normalized(value) {
 
-    return String(value ?? "")
+    return String(
+        value ?? ""
+    )
         .trim()
         .toLowerCase();
 
 }
 
 
-/* ==========================================================
-   TODAY START
-========================================================== */
-
 function todayStart() {
 
-    const d = new Date();
+    const d =
+        new Date();
 
     return new Date(
         d.getFullYear(),
@@ -93,22 +104,16 @@ function todayStart() {
 }
 
 
-/* ==========================================================
-   DAYS ELAPSED
-========================================================== */
-
 function daysElapsed(dateString) {
 
     if (!dateString)
 
         return null;
 
-
     const d =
         new Date(
             dateString + "T00:00:00"
         );
-
 
     if (
         Number.isNaN(
@@ -118,11 +123,12 @@ function daysElapsed(dateString) {
 
         return null;
 
-
     return Math.floor(
         (
-            todayStart() - d
-        ) / 86400000
+            todayStart() -
+            d
+        ) /
+        86400000
     );
 
 }
@@ -190,21 +196,194 @@ function formatElapsedDuration(dateString) {
 
 
 /* ==========================================================
-   FORMAT DATE
+   CALENDAR MONTH / DAY DURATION
+   Example:
+   1m 23d
+   9m 10d
 ========================================================== */
 
-function formatDate(dateString) {
+function formatElapsedDuration(
+    dateString
+) {
+
+    if (!dateString)
+
+        return "N/A";
+
+    const parts =
+        String(
+            dateString
+        ).split("-");
+
+    if (
+        parts.length !== 3
+    )
+
+        return "N/A";
+
+    const year =
+        Number(parts[0]);
+
+    const month =
+        Number(parts[1]);
+
+    const day =
+        Number(parts[2]);
+
+    if (
+        !Number.isInteger(year) ||
+        !Number.isInteger(month) ||
+        !Number.isInteger(day)
+    )
+
+        return "N/A";
+
+    const start =
+        new Date(
+            year,
+            month - 1,
+            day
+        );
+
+    const today =
+        todayStart();
+
+    if (
+        Number.isNaN(
+            start.getTime()
+        )
+    )
+
+        return "N/A";
+
+    if (start > today)
+
+        return "0d";
+
+
+    let months =
+        (
+            today.getFullYear() -
+            start.getFullYear()
+        ) *
+        12 +
+        (
+            today.getMonth() -
+            start.getMonth()
+        );
+
+
+    const daysInMonth =
+        (y, m) =>
+            new Date(
+                y,
+                m + 1,
+                0
+            ).getDate();
+
+
+    function addCalendarMonths(
+        date,
+        count
+    ) {
+
+        const targetMonth =
+            date.getMonth() +
+            count;
+
+        const targetYear =
+            date.getFullYear() +
+            Math.floor(
+                targetMonth / 12
+            );
+
+        const normalizedMonth =
+            (
+                targetMonth % 12 +
+                12
+            ) % 12;
+
+        const targetDay =
+            Math.min(
+                date.getDate(),
+                daysInMonth(
+                    targetYear,
+                    normalizedMonth
+                )
+            );
+
+        return new Date(
+            targetYear,
+            normalizedMonth,
+            targetDay
+        );
+
+    }
+
+
+    let monthDate =
+        addCalendarMonths(
+            start,
+            months
+        );
+
+
+    if (
+        monthDate > today
+    ) {
+
+        months--;
+
+        monthDate =
+            addCalendarMonths(
+                start,
+                months
+            );
+
+    }
+
+
+    const remainingDays =
+        Math.floor(
+            (
+                today.getTime() -
+                monthDate.getTime()
+            ) /
+            86400000
+        );
+
+
+    if (
+        months > 0 &&
+        remainingDays > 0
+    )
+
+        return `${months}m ${remainingDays}d`;
+
+
+    if (months > 0)
+
+        return `${months}m`;
+
+
+    return `${remainingDays}d`;
+
+}
+
+
+function formatDate(
+    dateString
+) {
 
     if (!dateString)
 
         return "—";
 
-
     const d =
         new Date(
-            dateString + "T00:00:00"
+            dateString +
+            "T00:00:00"
         );
-
 
     if (
         Number.isNaN(
@@ -213,7 +392,6 @@ function formatDate(dateString) {
     )
 
         return "—";
-
 
     return d.toLocaleDateString(
         "en-GB",
@@ -227,20 +405,16 @@ function formatDate(dateString) {
 }
 
 
-/* ==========================================================
-   FORMAT DATE + TIME
-========================================================== */
-
-function formatDateTime(value) {
+function formatDateTime(
+    value
+) {
 
     if (!value)
 
         return "—";
 
-
     const d =
         new Date(value);
-
 
     if (
         Number.isNaN(
@@ -249,7 +423,6 @@ function formatDateTime(value) {
     )
 
         return "—";
-
 
     return d.toLocaleString(
         "en-GB",
@@ -266,41 +439,41 @@ function formatDateTime(value) {
 }
 
 
-/* ==========================================================
-   STATUS
-========================================================== */
-
-function makeStatus(record) {
+function makeStatus(
+    record
+) {
 
     const value =
         normalized(
             record?.status
         );
 
-
     if (
-        value === "successful"
+        value ===
+        "successful"
     )
 
         return "Successful";
 
-
     if (
-        value === "unsuccessful"
+        value ===
+        "unsuccessful"
     )
 
         return "Unsuccessful";
-
 
     return "Pending";
 
 }
 
 
-function statusClass(status) {
+function statusClass(
+    status
+) {
 
     return String(
-        status || "Pending"
+        status ||
+        "Pending"
     )
         .toLowerCase()
         .replace(
@@ -311,15 +484,12 @@ function statusClass(status) {
 }
 
 
-/* ==========================================================
-   TOAST
-========================================================== */
-
-function toast(message) {
+function toast(
+    message
+) {
 
     const el =
         $("toast");
-
 
     if (!el) {
 
@@ -329,20 +499,16 @@ function toast(message) {
 
     }
 
-
     el.textContent =
         message;
-
 
     el.classList.add(
         "show"
     );
 
-
     clearTimeout(
         toast.timer
     );
-
 
     toast.timer =
         setTimeout(
@@ -359,10 +525,6 @@ function toast(message) {
 }
 
 
-/* ==========================================================
-   BUTTON LOADING
-========================================================== */
-
 function setButtonLoading(
     button,
     loading,
@@ -373,10 +535,8 @@ function setButtonLoading(
 
         return;
 
-
     button.disabled =
         loading;
-
 
     button.textContent =
         loading
@@ -387,79 +547,62 @@ function setButtonLoading(
 
 
 /* ==========================================================
-   LOAD ALL DATA FROM SUPABASE
+   LOAD ALL DATA
 ========================================================== */
 
 async function loadAll() {
 
     const [
-
         recordsRes,
-
         registryRes,
-
         auditRes
-
     ] = await Promise.all([
 
-        supabaseClient
-            .from("buffalo_records")
-            .select("*")
-            .order(
-                "created_at",
-                {
-                    ascending: false
-                }
-            ),
+        apiRequest(
+            "/api/records"
+        ),
 
-        supabaseClient
-            .from("buffalo_registry")
-            .select("*")
-            .order(
-                "created_at",
-                {
-                    ascending: false
-                }
-            ),
+        apiRequest(
+            "/api/registry"
+        ),
 
-        supabaseClient
-            .from("audit_logs")
-            .select("*")
-            .order(
-                "changed_at",
-                {
-                    ascending: false
-                }
+        isLoggedIn &&
+        normalized(
+            currentUser
+        ) ===
+        "karthiknani"
+
+            ? apiRequest(
+                "/api/audit-logs"
             )
+
+            : Promise.resolve([])
 
     ]);
 
 
-    if (recordsRes.error)
-
-        throw recordsRes.error;
-
-
-    if (registryRes.error)
-
-        throw registryRes.error;
-
-
-    if (auditRes.error)
-
-        throw auditRes.error;
-
-
     records =
-        recordsRes.data || [];
+        Array.isArray(
+            recordsRes
+        )
+            ? recordsRes
+            : [];
 
 
     registry =
-        registryRes.data || [];
+        Array.isArray(
+            registryRes
+        )
+            ? registryRes
+            : [];
 
 
     auditLogs =
-        auditRes.data || [];
+        Array.isArray(
+            auditRes
+        )
+            ? auditRes
+            : [];
 
 
     populateBuffaloDropdown();
@@ -478,12 +621,16 @@ async function loadAll() {
 
 
 /* ==========================================================
-   FIND REGISTRY BUFFALO FOR RECORD
+   REGISTRY / RECORD HELPERS
 ========================================================== */
 
-function getRegistryForRecord(record) {
+function getRegistryForRecord(
+    record
+) {
 
-    if (record.buffalo_id) {
+    if (
+        record.buffalo_id
+    ) {
 
         return registry.find(
             buffalo =>
@@ -496,33 +643,26 @@ function getRegistryForRecord(record) {
 
     return registry.find(
         buffalo =>
-
             normalized(
                 buffalo.name
             ) ===
             normalized(
                 record.name
-            )
-
-            &&
-
+            ) &&
             normalized(
                 buffalo.insurance_number
             ) ===
             normalized(
                 record.insurance_number
             )
-
     ) || null;
 
 }
 
 
-/* ==========================================================
-   CHECK WHETHER BUFFALO HAS A RECORD
-========================================================== */
-
-function isRegistryTracked(buffalo) {
+function isRegistryTracked(
+    buffalo
+) {
 
     return records.some(
         record => {
@@ -538,25 +678,19 @@ function isRegistryTracked(buffalo) {
 
             }
 
-
             return (
-
                 normalized(
                     record.name
                 ) ===
                 normalized(
                     buffalo.name
-                )
-
-                &&
-
+                ) &&
                 normalized(
                     record.insurance_number
                 ) ===
                 normalized(
                     buffalo.insurance_number
                 )
-
             );
 
         }
@@ -566,7 +700,7 @@ function isRegistryTracked(buffalo) {
 
 
 /* ==========================================================
-   POPULATE BUFFALO DROPDOWN
+   BUFFALO DROPDOWN
 ========================================================== */
 
 function populateBuffaloDropdown() {
@@ -574,46 +708,28 @@ function populateBuffaloDropdown() {
     const select =
         $("buffaloSelect");
 
-
     if (!select)
 
         return;
 
-
     const selected =
         select.value;
 
-
     select.innerHTML =
-
-        `<option value="">
-            — Choose Buffalo —
-        </option>`
-
-        +
-
-        registry.map(
-            buffalo => `
-
-                <option
-                    value="${esc(buffalo.id)}"
-                >
-
-                    ${esc(
+        `<option value="">— Choose Buffalo —</option>` +
+        registry
+            .map(
+                buffalo =>
+                    `<option value="${esc(
+                        buffalo.id
+                    )}">${esc(
                         buffalo.name
-                    )}
-
-                    —
-
-                    ${esc(
+                    )} — ${esc(
                         buffalo.insurance_number ||
                         "No insurance number"
-                    )}
-
-                </option>
-
-            `
-        ).join("");
+                    )}</option>`
+            )
+            .join("");
 
 
     if (
@@ -623,19 +739,13 @@ function populateBuffaloDropdown() {
                 buffalo.id ===
                 selected
         )
-    ) {
+    )
 
         select.value =
             selected;
 
-    }
-
 }
 
-
-/* ==========================================================
-   BUFFALO DROPDOWN CHANGE
-========================================================== */
 
 if ($("buffaloSelect")) {
 
@@ -648,15 +758,19 @@ if ($("buffaloSelect")) {
                     registry.find(
                         b =>
                             b.id ===
-                            $("buffaloSelect").value
+                            $("buffaloSelect")
+                                .value
                     );
 
 
-                if ($("insuranceNumber"))
+                if (
+                    $("insuranceNumber")
+                )
 
                     $("insuranceNumber")
                         .value =
-                        buffalo?.insurance_number ||
+                        buffalo
+                            ?.insurance_number ||
                         "";
 
             }
@@ -673,7 +787,8 @@ function renderRecords() {
 
     const query =
         normalized(
-            $("recordSearch")?.value
+            $("recordSearch")
+                ?.value
         );
 
 
@@ -682,25 +797,15 @@ function renderRecords() {
             record =>
 
                 [
-
                     record.name,
-
                     record.insurance_number,
-
                     record.insemination_date,
-
                     record.birth_date,
-
                     makeStatus(record)
-
                 ]
-
                     .join(" ")
-
                     .toLowerCase()
-
                     .includes(query)
-
         );
 
 
@@ -712,15 +817,21 @@ function renderRecords() {
     $("recordsBody")
         .innerHTML =
 
-        filtered.map(
-            record => {
+        filtered
+            .map(
+                record => {
 
-                const status =
-                    makeStatus(
-                        record
-                    );
+                    const status =
+                        makeStatus(
+                            record
+                        );
 
+                    const inseminationDays =
+                        formatElapsedDuration(
+                            record.insemination_date
+                        );
 
+<<<<<<< Updated upstream
                 const inseminationDays =
                     formatElapsedDuration(
                         record.insemination_date
@@ -731,119 +842,118 @@ function renderRecords() {
     formatElapsedDuration(
         record.birth_date
     );
+=======
+                    const birthDays =
+                        formatElapsedDuration(
+                            record.birth_date
+                        );
+>>>>>>> Stashed changes
 
 
-                return `
+                    const actionCell =
+                        isLoggedIn
+
+                            ? `
+<td>
+
+<div class="actions">
+
+<button
+    class="table-action"
+    onclick="editRecord('${record.id}')"
+>
+    Edit
+</button>
+
+<button
+    class="table-action delete"
+    onclick="deleteRecord('${record.id}')"
+>
+    Delete
+</button>
+
+</div>
+
+</td>
+`
+
+                            : "";
+
+
+                    return `
 
 <tr>
 
 <td>
 
-    <strong>
-
-        ${esc(
-            record.name
-        )}
-
-    </strong>
+<strong>
+    ${esc(record.name)}
+</strong>
 
 </td>
 
-
 <td>
-
-    ${esc(
-        record.insurance_number
-    )}
-
+    ${esc(record.insurance_number)}
 </td>
 
-
 <td>
-
     ${formatDate(
         record.insemination_date
     )}
-
 </td>
 
-
 <td>
+<<<<<<< Updated upstream
 
     ${
     inseminationDays
 }
 
+=======
+    ${inseminationDays}
+>>>>>>> Stashed changes
 </td>
 
-
 <td>
-
     ${formatDate(
         record.birth_date
     )}
-
 </td>
 
+<td>
+    ${birthDays}
+</td>
 
 <td>
 
+<<<<<<< Updated upstream
    ${
     birthDays
 }
+=======
+<span
+    class="status ${statusClass(status)} status-readonly"
+>
+
+    ${esc(status)}
+
+</span>
+>>>>>>> Stashed changes
 
 </td>
 
-
-<td>
-
-    <span
-        class="status ${statusClass(status)} status-readonly"
-    >
-
-        ${esc(status)}
-
-    </span>
-
-</td>
-
-
-<td>
-
-    <div class="actions">
-
-        <button
-            class="table-action"
-            onclick="editRecord('${record.id}')"
-        >
-
-            Edit
-
-        </button>
-
-
-        <button
-            class="table-action delete"
-            onclick="deleteRecord('${record.id}')"
-        >
-
-            Delete
-
-        </button>
-
-    </div>
-
-</td>
+${actionCell}
 
 </tr>
 
 `;
 
-            }
-        ).join("");
+                }
+            )
+            .join("");
 
 
-    if ($("emptyRecords")) {
+    if ($("emptyRecords"))
 
         $("emptyRecords")
             .classList.toggle(
@@ -851,13 +961,38 @@ function renderRecords() {
                 filtered.length > 0
             );
 
-    }
+
+    const actionHeader =
+        $("recordsActionHeader");
+
+    if (actionHeader)
+
+        actionHeader.classList.toggle(
+            "hidden",
+            !isLoggedIn
+        );
+
+}
+/* ==========================================================
+   DAILY RECORDS SEARCH
+========================================================== */
+
+if ($("recordSearch")) {
+
+    $("recordSearch")
+        .addEventListener(
+            "input",
+            () => {
+
+                renderRecords();
+
+            }
+        );
 
 }
 
-
 /* ==========================================================
-   RENDER PENDING ANIMALS
+   RENDER PENDING
 ========================================================== */
 
 function renderPending() {
@@ -876,67 +1011,64 @@ function renderPending() {
         $("pendingBody")
             .innerHTML =
 
-            pending.map(
-                buffalo => `
+            pending
+                .map(
+                    buffalo => `
 
 <tr>
 
 <td>
 
-    <strong>
-
-        ${esc(
-            buffalo.name
-        )}
-
-    </strong>
+<strong>
+    ${esc(buffalo.name)}
+</strong>
 
 </td>
 
-
 <td>
-
     ${esc(
         buffalo.insurance_number ||
         "—"
     )}
-
 </td>
-
 
 <td>
 
-    <span class="status pending">
-
-        Pending
-
-    </span>
+<span class="status pending">
+    Pending
+</span>
 
 </td>
 
-
 <td>
 
-    <button
-        class="table-action"
-        onclick="addPendingRecord('${buffalo.id}')"
-    >
+${
+    isLoggedIn
 
-        Add Record →
+        ? `
+<button
+    class="table-action"
+    onclick="addPendingRecord('${buffalo.id}')"
+>
+    Add Record →
+</button>
+`
 
-    </button>
+        : ""
+}
 
 </td>
 
 </tr>
 
 `
-            ).join("");
+                )
+                .join("");
 
     }
 
 
-    if ($("emptyPending")) {
+    if ($("emptyPending"))
 
         $("emptyPending")
             .classList.toggle(
@@ -944,16 +1076,12 @@ function renderPending() {
                 pending.length > 0
             );
 
-    }
 
-
-    if ($("pendingCount")) {
+    if ($("pendingCount"))
 
         $("pendingCount")
             .textContent =
             `${pending.length} pending`;
-
-    }
 
 }
 
@@ -1037,7 +1165,9 @@ function renderMetrics() {
    AUDIT SNAPSHOT
 ========================================================== */
 
-function auditSnapshot(record) {
+function auditSnapshot(
+    record
+) {
 
     if (!record)
 
@@ -1074,7 +1204,9 @@ function auditSnapshot(record) {
                 : null,
 
         status:
-            makeStatus(record)
+            makeStatus(
+                record
+            )
 
     };
 
@@ -1082,7 +1214,7 @@ function auditSnapshot(record) {
 
 
 /* ==========================================================
-   WRITE AUDIT LOG
+   WRITE DAILY RECORD AUDIT
 ========================================================== */
 
 async function writeAudit(
@@ -1107,106 +1239,202 @@ async function writeAudit(
             : null;
 
 
-    const { error } =
-        await supabaseClient
-            .from("audit_logs")
-            .insert({
+    await apiRequest(
+        "/api/audit-logs",
+        {
+            method: "POST",
 
-                changed_by:
-                    currentUser,
+            body:
+                JSON.stringify({
 
-                record_id:
-                    newData?.record_id ||
-                    oldData?.record_id ||
-                    null,
+                    changed_by:
+                        currentUser,
 
-                name:
-                    newData?.name ||
-                    oldData?.name ||
-                    null,
+                    record_id:
+                        newData?.record_id ||
+                        oldData?.record_id ||
+                        null,
 
-                insurance_number:
-                    newData?.insurance_number ||
-                    oldData?.insurance_number ||
-                    null,
+                    name:
+                        newData?.name ||
+                        oldData?.name ||
+                        null,
 
-                insemination_date:
-                    newData?.insemination_date ||
-                    oldData?.insemination_date ||
-                    null,
+                    insurance_number:
+                        newData?.insurance_number ||
+                        oldData?.insurance_number ||
+                        null,
 
-                days_elapsed_from_insemination:
-                    newData?.days_elapsed_from_insemination ??
-                    oldData?.days_elapsed_from_insemination ??
-                    null,
+                    insemination_date:
+                        newData?.insemination_date ||
+                        oldData?.insemination_date ||
+                        null,
 
-                birth_date:
-                    newData?.birth_date ||
-                    oldData?.birth_date ||
-                    null,
+                    days_elapsed_from_insemination:
+                        newData?.days_elapsed_from_insemination ??
+                        oldData?.days_elapsed_from_insemination ??
+                        null,
 
-                days_elapsed_birth:
-                    newData?.days_elapsed_birth ??
-                    oldData?.days_elapsed_birth ??
-                    null,
+                    birth_date:
+                        newData?.birth_date ||
+                        oldData?.birth_date ||
+                        null,
 
-                status:
-                    newData?.status ||
-                    oldData?.status ||
-                    null,
+                    days_elapsed_birth:
+                        newData?.days_elapsed_birth ??
+                        oldData?.days_elapsed_birth ??
+                        null,
 
-                action:
-                    action,
+                    status:
+                        newData?.status ||
+                        oldData?.status ||
+                        null,
 
-                old_name:
-                    oldData?.name ||
-                    null,
+                    action:
+                        action,
 
-                old_insurance_number:
-                    oldData?.insurance_number ||
-                    null,
+                    old_name:
+                        oldData?.name ||
+                        null,
 
-                old_insemination_date:
-                    oldData?.insemination_date ||
-                    null,
+                    old_insurance_number:
+                        oldData?.insurance_number ||
+                        null,
 
-                old_birth_date:
-                    oldData?.birth_date ||
-                    null,
+                    old_insemination_date:
+                        oldData?.insemination_date ||
+                        null,
 
-                old_status:
-                    oldData?.status ||
-                    null,
+                    old_birth_date:
+                        oldData?.birth_date ||
+                        null,
 
-                new_name:
-                    newData?.name ||
-                    null,
+                    old_status:
+                        oldData?.status ||
+                        null,
 
-                new_insurance_number:
-                    newData?.insurance_number ||
-                    null,
+                    new_name:
+                        newData?.name ||
+                        null,
 
-                new_insemination_date:
-                    newData?.insemination_date ||
-                    null,
+                    new_insurance_number:
+                        newData?.insurance_number ||
+                        null,
 
-                new_birth_date:
-                    newData?.birth_date ||
-                    null,
+                    new_insemination_date:
+                        newData?.insemination_date ||
+                        null,
 
-                new_status:
-                    newData?.status ||
-                    null
+                    new_birth_date:
+                        newData?.birth_date ||
+                        null,
 
-            });
+                    new_status:
+                        newData?.status ||
+                        null
 
+                })
 
-    if (error)
-
-        throw error;
+        }
+    );
 
 }
 
+
+/* ==========================================================
+   WRITE REGISTRY AUDIT
+========================================================== */
+
+async function writeRegistryAudit(
+    action,
+    oldBuffalo,
+    newBuffalo
+) {
+
+    await apiRequest(
+        "/api/audit-logs",
+        {
+            method: "POST",
+
+            body:
+                JSON.stringify({
+
+                    changed_by:
+                        currentUser,
+
+                    record_id:
+                        newBuffalo?.id ||
+                        oldBuffalo?.id ||
+                        null,
+
+                    name:
+                        newBuffalo?.name ||
+                        oldBuffalo?.name ||
+                        null,
+
+                    insurance_number:
+                        newBuffalo?.insurance_number ||
+                        oldBuffalo?.insurance_number ||
+                        null,
+
+                    insemination_date:
+                        null,
+
+                    days_elapsed_from_insemination:
+                        null,
+
+                    birth_date:
+                        null,
+
+                    days_elapsed_birth:
+                        null,
+
+                    status:
+                        null,
+
+                    action:
+                        action,
+
+                    old_name:
+                        oldBuffalo?.name ||
+                        null,
+
+                    old_insurance_number:
+                        oldBuffalo?.insurance_number ||
+                        null,
+
+                    old_insemination_date:
+                        null,
+
+                    old_birth_date:
+                        null,
+
+                    old_status:
+                        null,
+
+                    new_name:
+                        newBuffalo?.name ||
+                        null,
+
+                    new_insurance_number:
+                        newBuffalo?.insurance_number ||
+                        null,
+
+                    new_insemination_date:
+                        null,
+
+                    new_birth_date:
+                        null,
+
+                    new_status:
+                        null
+
+                })
+
+        }
+    );
+
+}
 
 /* ==========================================================
    DAILY RECORD FORM
@@ -1221,16 +1449,13 @@ if ($("recordForm")) {
 
                 event.preventDefault();
 
-
                 const editId =
                     $("editId")
                         .value;
 
-
                 const buffaloId =
                     $("buffaloSelect")
                         .value;
-
 
                 const buffalo =
                     registry.find(
@@ -1238,7 +1463,6 @@ if ($("recordForm")) {
                             b.id ===
                             buffaloId
                     );
-
 
                 if (!buffalo) {
 
@@ -1250,16 +1474,13 @@ if ($("recordForm")) {
 
                 }
 
-
                 const inseminationDate =
                     $("inseminationDate")
                         .value;
 
-
                 const birthDate =
                     $("birthDate")
                         .value;
-
 
                 if (
                     !inseminationDate &&
@@ -1273,7 +1494,6 @@ if ($("recordForm")) {
                     return;
 
                 }
-
 
                 const data = {
 
@@ -1308,7 +1528,6 @@ if ($("recordForm")) {
                 const button =
                     $("saveBtn");
 
-
                 const normalText =
                     editId
                         ? "Update Entry →"
@@ -1324,10 +1543,9 @@ if ($("recordForm")) {
 
                 try {
 
-
-                    /* ==========================================
+                    /* =================================
                        EDIT DAILY RECORD
-                    ========================================== */
+                    ================================= */
 
                     if (editId) {
 
@@ -1348,27 +1566,18 @@ if ($("recordForm")) {
                         }
 
 
-                        const {
-                            data: updated,
-                            error
-                        } =
+                        const updated =
+                            await apiRequest(
+                                `/api/records/${encodeURIComponent(editId)}`,
+                                {
+                                    method: "PUT",
 
-                            await supabaseClient
-                                .from(
-                                    "buffalo_records"
-                                )
-                                .update(data)
-                                .eq(
-                                    "id",
-                                    editId
-                                )
-                                .select()
-                                .single();
-
-
-                        if (error)
-
-                            throw error;
+                                    body:
+                                        JSON.stringify(
+                                            data
+                                        )
+                                }
+                            );
 
 
                         await writeAudit(
@@ -1385,36 +1594,29 @@ if ($("recordForm")) {
                     }
 
 
-                    /* ==========================================
+                    /* =================================
                        CREATE DAILY RECORD
-                    ========================================== */
+                    ================================= */
 
                     else {
 
-                        const {
-                            data: created,
-                            error
-                        } =
+                        const created =
+                            await apiRequest(
+                                "/api/records",
+                                {
+                                    method: "POST",
 
-                            await supabaseClient
-                                .from(
-                                    "buffalo_records"
-                                )
-                                .insert({
+                                    body:
+                                        JSON.stringify({
 
-                                    ...data,
+                                            ...data,
 
-                                    created_by:
-                                        currentUser
+                                            created_by:
+                                                currentUser
 
-                                })
-                                .select()
-                                .single();
-
-
-                        if (error)
-
-                            throw error;
+                                        })
+                                }
+                            );
 
 
                         await writeAudit(
@@ -1437,13 +1639,11 @@ if ($("recordForm")) {
 
                 }
 
-
                 catch (error) {
 
                     console.error(
                         error
                     );
-
 
                     alert(
                         "Could not save the record.\n\n" +
@@ -1451,7 +1651,6 @@ if ($("recordForm")) {
                     );
 
                 }
-
 
                 finally {
 
@@ -1476,10 +1675,22 @@ if ($("recordForm")) {
 window.editRecord =
 function(id) {
 
+    if (!isLoggedIn) {
+
+        toast(
+            "Please login first."
+        );
+
+        return;
+
+    }
+
+
     const record =
         records.find(
             item =>
-                item.id === id
+                item.id ===
+                id
         );
 
 
@@ -1544,7 +1755,9 @@ function(id) {
 
     $("recordStatus")
         .value =
-        makeStatus(record);
+        makeStatus(
+            record
+        );
 
 
     $("recordStatus")
@@ -1567,11 +1780,9 @@ function(id) {
             );
 
 
-    if ($("saveBtn"))
-
-        $("saveBtn")
-            .textContent =
-            "Update Entry →";
+    $("saveBtn")
+        .textContent =
+        "Update Entry →";
 
 
     if ($("cancelEdit"))
@@ -1582,12 +1793,20 @@ function(id) {
             );
 
 
+    const recordsTab =
+        document.querySelector(
+            '[data-tab="records"]'
+        );
+
+
+    if (recordsTab)
+
+        recordsTab.click();
+
+
     window.scrollTo({
-
         top: 0,
-
         behavior: "smooth"
-
     });
 
 };
@@ -1599,13 +1818,10 @@ function(id) {
 
 function resetRecordForm() {
 
-    if (!$("recordForm"))
+    if ($("recordForm"))
 
-        return;
-
-
-    $("recordForm")
-        .reset();
+        $("recordForm")
+            .reset();
 
 
     if ($("editId"))
@@ -1627,7 +1843,6 @@ function resetRecordForm() {
         $("recordStatus")
             .value =
             "Pending";
-
 
         $("recordStatus")
             .disabled =
@@ -1677,7 +1892,11 @@ if ($("cancelEdit")) {
     $("cancelEdit")
         .addEventListener(
             "click",
-            resetRecordForm
+            () => {
+
+                resetRecordForm();
+
+            }
         );
 
 }
@@ -1690,10 +1909,22 @@ if ($("cancelEdit")) {
 window.addPendingRecord =
 function(id) {
 
+    if (!isLoggedIn) {
+
+        toast(
+            "Please login first."
+        );
+
+        return;
+
+    }
+
+
     const buffalo =
         registry.find(
-            b =>
-                b.id === id
+            item =>
+                item.id ===
+                id
         );
 
 
@@ -1744,10 +1975,9 @@ function(id) {
             .value =
             "Pending";
 
-
         $("recordStatus")
             .disabled =
-            true;
+            false;
 
     }
 
@@ -1794,11 +2024,8 @@ function(id) {
 
 
     window.scrollTo({
-
         top: 0,
-
         behavior: "smooth"
-
     });
 
 };
@@ -1811,10 +2038,22 @@ function(id) {
 window.deleteRecord =
 async function(id) {
 
+    if (!isLoggedIn) {
+
+        toast(
+            "Please login first."
+        );
+
+        return;
+
+    }
+
+
     const record =
         records.find(
             item =>
-                item.id === id
+                item.id ===
+                id
         );
 
 
@@ -1841,24 +2080,12 @@ async function(id) {
         );
 
 
-        const {
-            error
-        } =
-
-            await supabaseClient
-                .from(
-                    "buffalo_records"
-                )
-                .delete()
-                .eq(
-                    "id",
-                    id
-                );
-
-
-        if (error)
-
-            throw error;
+        await apiRequest(
+            `/api/records/${encodeURIComponent(id)}`,
+            {
+                method: "DELETE"
+            }
+        );
 
 
         await loadAll();
@@ -1869,7 +2096,6 @@ async function(id) {
         );
 
     }
-
 
     catch (error) {
 
@@ -1889,8 +2115,7 @@ async function(id) {
 
 
 /* ==========================================================
-   BUFFALO REGISTRY
-   ADD + EDIT
+   BUFFALO REGISTRY - ADD / EDIT
 ========================================================== */
 
 if ($("registryForm")) {
@@ -1922,10 +2147,6 @@ if ($("registryForm")) {
                         .trim();
 
 
-                /* ==========================================
-                   VALIDATION
-                ========================================== */
-
                 if (
                     !name ||
                     !insurance
@@ -1955,7 +2176,6 @@ if ($("registryForm")) {
                     button.disabled =
                         true;
 
-
                     button.innerHTML =
                         editId
                             ? "Updating..."
@@ -1966,13 +2186,11 @@ if ($("registryForm")) {
 
                 try {
 
-
-                    /* ==========================================
-                       UPDATE EXISTING BUFFALO
-                    ========================================== */
+                    /* ==================================
+                       EDIT EXISTING BUFFALO
+                    ================================== */
 
                     if (editId) {
-
 
                         const oldBuffalo =
                             registry.find(
@@ -1989,163 +2207,163 @@ if ($("registryForm")) {
                         if (!oldBuffalo) {
 
                             throw new Error(
-                                "The buffalo could not be found."
+                                "The buffalo could not be found in the current registry."
                             );
 
                         }
 
 
-                        /*
-                         * IMPORTANT:
-                         *
-                         * Do NOT use:
-                         *
-                         * .select("*").single()
-                         *
-                         * here.
-                         *
-                         * Your previous error:
-                         *
-                         * Cannot coerce the result
-                         * to a single JSON object
-                         *
-                         * came from that response handling.
-                         */
+                        const updatedBuffalo =
+                            await apiRequest(
+                                `/api/registry/${encodeURIComponent(editId)}`,
+                                {
+                                    method: "PUT",
 
-                        const {
-                            error:
-                                registryUpdateError
-                        } =
+                                    body:
+                                        JSON.stringify({
 
-                            await supabaseClient
+                                            name:
+                                                name,
 
-                                .from(
-                                    "buffalo_registry"
-                                )
+                                            insurance_number:
+                                                insurance,
 
-                                .update({
+                                            added_by:
+                                                oldBuffalo.added_by ||
+                                                currentUser
 
-                                    name:
-                                        name,
+                                        })
+                                }
+                            );
 
-                                    insurance_number:
-                                        insurance
 
-                                })
+                        await writeRegistryAudit(
+                            "EDIT",
+                            oldBuffalo,
+                            updatedBuffalo
+                        );
 
-                                .eq(
-                                    "id",
-                                    editId
+
+                        const relatedRecords =
+                            records.filter(
+                                record =>
+                                    String(
+                                        record.buffalo_id
+                                    ) ===
+                                    String(
+                                        editId
+                                    )
+                            );
+
+
+                        for (
+                            const record
+                            of relatedRecords
+                        ) {
+
+                            const oldRecord =
+                                {
+                                    ...record
+                                };
+
+
+                            const updatedRecord =
+                                await apiRequest(
+                                    `/api/records/${encodeURIComponent(record.id)}`,
+                                    {
+                                        method: "PUT",
+
+                                        body:
+                                            JSON.stringify({
+
+                                                buffalo_id:
+                                                    updatedBuffalo.id,
+
+                                                name:
+                                                    updatedBuffalo.name,
+
+                                                insurance_number:
+                                                    updatedBuffalo.insurance_number,
+
+                                                insemination_date:
+                                                    record.insemination_date,
+
+                                                birth_date:
+                                                    record.birth_date,
+
+                                                status:
+                                                    record.status,
+
+                                                updated_by:
+                                                    currentUser
+
+                                            })
+                                    }
                                 );
 
 
-                        if (
-                            registryUpdateError
-                        )
+                            await writeAudit(
+                                "EDIT",
+                                oldRecord,
+                                updatedRecord
+                            );
 
-                            throw registryUpdateError;
+                        }
 
-
-                        /* ==========================================
-                           UPDATE LINKED DAILY RECORDS
-                        ========================================== */
-
-                        const {
-                            error:
-                                recordsUpdateError
-                        } =
-
-                            await supabaseClient
-
-                                .from(
-                                    "buffalo_records"
-                                )
-
-                                .update({
-
-                                    name:
-                                        name,
-
-                                    insurance_number:
-                                        insurance,
-
-                                    updated_by:
-                                        currentUser
-
-                                })
-
-                                .eq(
-                                    "buffalo_id",
-                                    editId
-                                );
-
-
-                        if (
-                            recordsUpdateError
-                        )
-
-                            throw recordsUpdateError;
-
-
-                        /* ==========================================
-                           RESET REGISTRY FORM
-                        ========================================== */
 
                         resetRegistryForm();
-
-
-                        /* ==========================================
-                           RELOAD EVERYTHING
-                        ========================================== */
 
                         await loadAll();
 
 
                         toast(
-                            `${name} updated successfully.`
+                            "Registry entry updated."
                         );
 
                     }
 
 
-                    /* ==========================================
-                       ADD NEW BUFFALO
-                    ========================================== */
+                    /* ==================================
+                       CREATE NEW BUFFALO
+                    ================================== */
 
                     else {
 
+                        const createdBuffalo =
+                            await apiRequest(
+                                "/api/registry",
+                                {
+                                    method: "POST",
 
-                        const {
-                            error:
-                                insertError
-                        } =
+                                    body:
+                                        JSON.stringify({
 
-                            await supabaseClient
+                                            id:
+                                                crypto.randomUUID(),
 
-                                .from(
-                                    "buffalo_registry"
-                                )
+                                            name:
+                                                name,
 
-                                .insert({
+                                            insurance_number:
+                                                insurance,
 
-                                    name:
-                                        name,
+                                            added_by:
+                                                currentUser
 
-                                    insurance_number:
-                                        insurance,
-
-                                    added_by:
-                                        currentUser
-
-                                });
-
-
-                        if (insertError)
-
-                            throw insertError;
+                                        })
+                                }
+                            );
 
 
-                        resetRegistryForm();
+                        await writeRegistryAudit(
+                            "CREATE",
+                            null,
+                            createdBuffalo
+                        );
+
+
+                        $("registryForm")
+                            .reset();
 
 
                         await loadAll();
@@ -2159,25 +2377,19 @@ if ($("registryForm")) {
 
                 }
 
-
                 catch (error) {
 
                     console.error(
-                        "Registry save error:",
                         error
                     );
 
 
                     alert(
-                        "Could not save the buffalo.\n\n" +
-                        (
-                            error?.message ||
-                            error
-                        )
+                        "Could not save buffalo.\n\n" +
+                        error.message
                     );
 
                 }
-
 
                 finally {
 
@@ -2185,7 +2397,6 @@ if ($("registryForm")) {
 
                         button.disabled =
                             false;
-
 
                         button.innerHTML =
                             originalText;
@@ -2206,13 +2417,10 @@ if ($("registryForm")) {
 
 function resetRegistryForm() {
 
-    const form =
-        $("registryForm");
+    if ($("registryForm"))
 
-
-    if (form)
-
-        form.reset();
+        $("registryForm")
+            .reset();
 
 
     if ($("registryEditId"))
@@ -2222,11 +2430,18 @@ function resetRegistryForm() {
             "";
 
 
+    if ($("registryFormTitle"))
+
+        $("registryFormTitle")
+            .textContent =
+            "Buffalo Registry";
+
+
     if ($("registrySaveBtn"))
 
         $("registrySaveBtn")
-            .innerHTML =
-            "Add to Master List <span>→</span>";
+            .textContent =
+            "Add to Master List →";
 
 
     if ($("registryCancelEdit"))
@@ -2236,63 +2451,20 @@ function resetRegistryForm() {
                 "hidden"
             );
 
-
-    if ($("registryEditActions"))
-
-        $("registryEditActions")
-            .classList.add(
-                "hidden"
-            );
-
-
-    const registryHeading =
-        document.querySelector(
-            "#registryForm"
-        )
-        ?.closest(
-            ".form-card"
-        )
-        ?.querySelector(
-            "h2"
-        );
-
-
-    if (registryHeading)
-
-        registryHeading.textContent =
-            "Register Buffalo";
-
 }
 
 
 /* ==========================================================
-   EDIT BUFFALO REGISTRY
+   EDIT REGISTRY
 ========================================================== */
 
 window.editRegistry =
-function(id) {
+async function(id) {
 
-    /*
-     * Find the buffalo from the currently
-     * loaded Supabase data.
-     */
+    if (!isLoggedIn) {
 
-    const buffalo =
-        registry.find(
-            item =>
-                String(
-                    item.id
-                ) ===
-                String(
-                    id
-                )
-        );
-
-
-    if (!buffalo) {
-
-        alert(
-            "Buffalo record could not be found."
+        toast(
+            "Please login first."
         );
 
         return;
@@ -2300,106 +2472,79 @@ function(id) {
     }
 
 
-    /*
-     * Store ID in hidden input.
-     */
-
-    $("registryEditId")
-        .value =
-        buffalo.id;
-
-
-    /*
-     * Load existing name.
-     */
-
-    $("registryName")
-        .value =
-        buffalo.name ||
-        "";
-
-
-    /*
-     * Load existing insurance number.
-     */
-
-    $("registryInsurance")
-        .value =
-        buffalo.insurance_number ||
-        "";
-
-
-    /*
-     * Change button.
-     */
-
-    $("registrySaveBtn")
-        .innerHTML =
-        "Update Buffalo <span>✓</span>";
-
-
-    /*
-     * Show Cancel Edit.
-     */
-
-    $("registryCancelEdit")
-        .classList.remove(
-            "hidden"
+    const buffalo =
+        registry.find(
+            item =>
+                item.id ===
+                id
         );
 
 
-    $("registryEditActions")
-        .classList.remove(
-            "hidden"
-        );
+    if (!buffalo)
+
+        return;
 
 
-    /*
-     * Change heading.
-     */
+    if ($("registryEditId"))
 
-    const registryHeading =
-        document.querySelector(
-            "#registryForm"
-        )
-        ?.closest(
-            ".form-card"
-        )
-        ?.querySelector(
-            "h2"
-        );
+        $("registryEditId")
+            .value =
+            buffalo.id;
 
 
-    if (registryHeading)
+    if ($("registryName"))
 
-        registryHeading.textContent =
+        $("registryName")
+            .value =
+            buffalo.name ||
+            "";
+
+
+    if ($("registryInsurance"))
+
+        $("registryInsurance")
+            .value =
+            buffalo.insurance_number ||
+            "";
+
+
+    if ($("registryFormTitle"))
+
+        $("registryFormTitle")
+            .textContent =
             "Edit Buffalo";
 
 
-    /*
-     * Scroll to Registry form.
-     */
+    if ($("registrySaveBtn"))
 
-    $("registryForm")
-        .scrollIntoView({
-            behavior: "smooth",
-            block: "center"
-        });
+        $("registrySaveBtn")
+            .textContent =
+            "Update Buffalo →";
 
 
-    /*
-     * Focus name field.
-     */
+    if ($("registryCancelEdit"))
 
-    setTimeout(
-        () => {
+        $("registryCancelEdit")
+            .classList.remove(
+                "hidden"
+            );
 
-            $("registryName")
-                ?.focus();
 
-        },
-        350
-    );
+    const registryTab =
+        document.querySelector(
+            '[data-tab="registry"]'
+        );
+
+
+    if (registryTab)
+
+        registryTab.click();
+
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
 
 };
 
@@ -2422,9 +2567,8 @@ if ($("registryCancelEdit")) {
 
 }
 
-
 /* ==========================================================
-   RENDER BUFFALO REGISTRY
+   RENDER REGISTRY
 ========================================================== */
 
 function renderRegistry() {
@@ -2440,21 +2584,13 @@ function renderRegistry() {
             buffalo =>
 
                 [
-
                     buffalo.name,
-
                     buffalo.insurance_number,
-
                     buffalo.added_by
-
                 ]
-
                     .join(" ")
-
                     .toLowerCase()
-
                     .includes(query)
-
         );
 
 
@@ -2466,24 +2602,21 @@ function renderRegistry() {
     $("registryBody")
         .innerHTML =
 
-        filtered.map(
-            buffalo => `
+        filtered
+            .map(
+                buffalo => `
 
 <tr>
 
-
 <td>
 
-    <strong>
-
-        ${esc(
-            buffalo.name
-        )}
-
-    </strong>
+<strong>
+    ${esc(
+        buffalo.name
+    )}
+</strong>
 
 </td>
-
 
 <td>
 
@@ -2494,7 +2627,6 @@ function renderRegistry() {
 
 </td>
 
-
 <td>
 
     ${esc(
@@ -2504,44 +2636,46 @@ function renderRegistry() {
 
 </td>
 
-
 <td>
 
-    <div class="actions">
+${
+    isLoggedIn
 
+        ? `
 
-        <button
-            class="table-action"
-            onclick="editRegistry('${buffalo.id}')"
-        >
+<div class="actions">
 
-            Edit
+<button
+    class="table-action"
+    onclick="editRegistry('${buffalo.id}')"
+>
+    Edit
+</button>
 
-        </button>
+<button
+    class="table-action delete"
+    onclick="deleteRegistry('${buffalo.id}')"
+>
+    Remove
+</button>
 
+</div>
 
-        <button
-            class="table-action delete"
-            onclick="deleteRegistry('${buffalo.id}')"
-        >
+`
 
-            Remove
-
-        </button>
-
-
-    </div>
+        : ""
+}
 
 </td>
-
 
 </tr>
 
 `
-        ).join("");
+            )
+            .join("");
 
 
-    if ($("emptyRegistry")) {
+    if ($("emptyRegistry"))
 
         $("emptyRegistry")
             .classList.toggle(
@@ -2549,22 +2683,32 @@ function renderRegistry() {
                 filtered.length > 0
             );
 
-    }
-
 }
 
 
 /* ==========================================================
-   DELETE BUFFALO FROM REGISTRY
+   DELETE REGISTRY
 ========================================================== */
 
 window.deleteRegistry =
 async function(id) {
 
+    if (!isLoggedIn) {
+
+        toast(
+            "Please login first."
+        );
+
+        return;
+
+    }
+
+
     const buffalo =
         registry.find(
             item =>
-                item.id === id
+                item.id ===
+                id
         );
 
 
@@ -2573,11 +2717,6 @@ async function(id) {
         return;
 
 
-    /*
-     * Don't remove a buffalo while
-     * it has an active daily record.
-     */
-
     if (
         isRegistryTracked(
             buffalo
@@ -2585,7 +2724,9 @@ async function(id) {
     ) {
 
         alert(
-            "This buffalo has an active tracking record.\n\nDelete the tracking record first if you really want to remove the buffalo from the master registry."
+            "This buffalo has an active tracking record.\n\n" +
+            "Delete the tracking record first if you really want " +
+            "to remove the buffalo from the master registry."
         );
 
         return;
@@ -2604,39 +2745,29 @@ async function(id) {
 
     try {
 
-
-        const {
-            error
-        } =
-
-            await supabaseClient
-
-                .from(
-                    "buffalo_registry"
-                )
-
-                .delete()
-
-                .eq(
-                    "id",
-                    id
-                );
+        await writeRegistryAudit(
+            "DELETE",
+            buffalo,
+            null
+        );
 
 
-        if (error)
-
-            throw error;
+        await apiRequest(
+            `/api/registry/${encodeURIComponent(id)}`,
+            {
+                method: "DELETE"
+            }
+        );
 
 
         await loadAll();
 
 
         toast(
-            "Buffalo removed from the master list."
+            "Registry entry removed."
         );
 
     }
-
 
     catch (error) {
 
@@ -2671,10 +2802,34 @@ if ($("registrySearch")) {
 
 
 /* ==========================================================
-   RENDER AUDIT LOGS
+   AUDIT LOG RENDER
 ========================================================== */
 
 function renderAudit() {
+
+    if (
+        !isLoggedIn ||
+        normalized(
+            currentUser
+        ) !==
+        "karthiknani"
+    ) {
+
+        if ($("auditBody"))
+
+            $("auditBody")
+                .innerHTML =
+                "";
+
+        return;
+
+    }
+
+
+    if (!$("auditBody"))
+
+        return;
+
 
     const query =
         normalized(
@@ -2686,28 +2841,39 @@ function renderAudit() {
         auditLogs.filter(
             log =>
 
-                Object
-                    .values(log)
+                [
+                    log.changed_by,
+                    log.name,
+                    log.insurance_number,
+                    log.action,
+                    log.status,
+                    log.old_name,
+                    log.new_name
+                ]
                     .join(" ")
                     .toLowerCase()
                     .includes(query)
-
         );
-
-
-    if (!$("auditBody"))
-
-        return;
 
 
     $("auditBody")
         .innerHTML =
 
-        filtered.map(
-            log => `
+        filtered
+            .map(
+                log => {
+
+                    const action =
+                        String(
+                            log.action ||
+                            ""
+                        )
+                            .toUpperCase();
+
+
+                    return `
 
 <tr>
-
 
 <td>
 
@@ -2717,145 +2883,80 @@ function renderAudit() {
 
 </td>
 
-
 <td>
 
-    <strong>
-
-        ${esc(
-            log.changed_by
-        )}
-
-    </strong>
+    ${esc(
+        log.changed_by ||
+        "—"
+    )}
 
 </td>
 
+<td>
+
+<strong>
+
+    ${esc(
+        log.name ||
+        "—"
+    )}
+
+</strong>
+
+</td>
 
 <td>
 
     ${esc(
-        log.name
+        log.insurance_number ||
+        "—"
     )}
 
 </td>
 
-
 <td>
+
+<span
+    class="status ${statusClass(action)}"
+>
 
     ${esc(
-        log.insurance_number
+        action
     )}
 
-</td>
+</span>
 
+</td>
 
 <td>
 
-    ${formatDate(
-        log.insemination_date
-    )}
+<button
+    class="table-action"
+    onclick="viewAuditChanges('${log.id}')"
+>
+
+    View Changes
+
+</button>
 
 </td>
-
-
-<td>
-
-    ${
-        log.days_elapsed_from_insemination
-        ??
-        "—"
-    }
-
-</td>
-
-
-<td>
-
-    ${formatDate(
-        log.birth_date
-    )}
-
-</td>
-
-
-<td>
-
-    ${
-        log.days_elapsed_birth
-        ??
-        "—"
-    }
-
-</td>
-
-
-<td>
-
-    <span
-        class="status ${statusClass(log.status)}"
-    >
-
-        ${esc(
-            log.status ||
-            "—"
-        )}
-
-    </span>
-
-</td>
-
-
-<td>
-
-    <strong>
-
-        ${esc(
-            log.action
-        )}
-
-    </strong>
-
-
-    ${
-        log.action === "EDIT"
-
-            ? `
-
-                <button
-                    class="table-action"
-                    onclick="viewAuditChanges('${log.id}')"
-                    style="margin-left:8px;"
-                >
-
-                    View Changes
-
-                </button>
-
-            `
-
-            : ""
-
-    }
-
-
-</td>
-
 
 </tr>
 
-`
-        ).join("");
+`;
+
+                }
+            )
+            .join("");
 
 
-    if ($("emptyAudit")) {
+    if ($("emptyAudit"))
 
         $("emptyAudit")
             .classList.toggle(
                 "hidden",
                 filtered.length > 0
             );
-
-    }
 
 }
 
@@ -2876,16 +2977,34 @@ if ($("auditSearch")) {
 
 
 /* ==========================================================
-   VIEW AUDIT CHANGES
+   AUDIT CHANGE MODAL
 ========================================================== */
 
 window.viewAuditChanges =
 function(id) {
 
+    if (
+        !isLoggedIn ||
+        normalized(
+            currentUser
+        ) !==
+        "karthiknani"
+    ) {
+
+        toast(
+            "Audit Logs are available only to karthiknani."
+        );
+
+        return;
+
+    }
+
+
     const log =
         auditLogs.find(
             item =>
-                item.id === id
+                item.id ===
+                id
         );
 
 
@@ -2894,178 +3013,53 @@ function(id) {
         return;
 
 
-    const changes = [];
+    const rows = [
 
+        [
+            "Buffalo Name",
+            log.old_name,
+            log.new_name
+        ],
 
-    function formatValue(value) {
+        [
+            "Insurance Number",
+            log.old_insurance_number,
+            log.new_insurance_number
+        ],
 
-        if (
-            value === null ||
-            value === undefined ||
-            value === ""
-        )
-
-            return "—";
-
-
-        return esc(
-            String(value)
-        );
-
-    }
-
-
-    function addChange(
-        field,
-        oldValue,
-        newValue
-    ) {
-
-        const oldRaw =
-            oldValue ?? "";
-
-
-        const newRaw =
-            newValue ?? "";
-
-
-        if (
-            oldRaw !==
-            newRaw
-        ) {
-
-            changes.push(`
-
-<tr>
-
-
-<td class="audit-change-field">
-
-    ${field}
-
-</td>
-
-
-<td class="audit-old-value">
-
-    <span class="audit-value-label">
-
-        Previous
-
-    </span>
-
-    ${formatValue(
-        oldValue
-    )}
-
-</td>
-
-
-<td class="audit-new-value">
-
-    <span class="audit-value-label">
-
-        Updated
-
-    </span>
-
-    ${formatValue(
-        newValue
-    )}
-
-</td>
-
-
-</tr>
-
-`);
-
-        }
-
-    }
-
-
-    addChange(
-        "Buffalo Name",
-        log.old_name,
-        log.new_name
-    );
-
-
-    addChange(
-        "Insurance Number",
-        log.old_insurance_number,
-        log.new_insurance_number
-    );
-
-
-    addChange(
-        "Insemination Date",
-        log.old_insemination_date
-            ? formatDate(
+        [
+            "Insemination Date",
+            formatDate(
                 log.old_insemination_date
-            )
-            : null,
-        log.new_insemination_date
-            ? formatDate(
+            ),
+            formatDate(
                 log.new_insemination_date
             )
-            : null
-    );
+        ],
 
-
-    addChange(
-        "Birth Date",
-        log.old_birth_date
-            ? formatDate(
+        [
+            "Birth Date",
+            formatDate(
                 log.old_birth_date
-            )
-            : null,
-        log.new_birth_date
-            ? formatDate(
+            ),
+            formatDate(
                 log.new_birth_date
             )
-            : null
-    );
+        ],
+
+        [
+            "Status",
+            log.old_status,
+            log.new_status
+        ]
+
+    ];
 
 
-    addChange(
-        "Status",
-        log.old_status,
-        log.new_status
-    );
+    if ($("auditChangesContent")) {
 
-
-    const content =
-        $("auditChangesContent");
-
-
-    if (!content)
-
-        return;
-
-
-    if (
-        changes.length ===
-        0
-    ) {
-
-        content.innerHTML = `
-
-<div class="audit-no-change">
-
-    No field values changed.
-
-</div>
-
-`;
-
-    }
-
-
-    else {
-
-        content.innerHTML = `
+        $("auditChangesContent")
+            .innerHTML = `
 
 <table class="audit-change-table">
 
@@ -3078,21 +3072,62 @@ function(id) {
 </th>
 
 <th>
-    Previous Value
+    Old Value
 </th>
 
 <th>
-    Updated Value
+    New Value
 </th>
 
 </tr>
 
 </thead>
 
-
 <tbody>
 
-${changes.join("")}
+${rows.map(
+    row => `
+
+<tr>
+
+<td class="audit-change-field">
+
+    <strong>
+        ${esc(row[0])}
+    </strong>
+
+</td>
+
+<td class="audit-old-value">
+
+    <span class="audit-value-label">
+        PREVIOUS
+    </span>
+
+    ${esc(
+        row[1] ||
+        "—"
+    )}
+
+</td>
+
+<td class="audit-new-value">
+
+    <span class="audit-value-label">
+        UPDATED
+    </span>
+
+    ${esc(
+        row[2] ||
+        "—"
+    )}
+
+</td>
+
+</tr>
+
+`
+).join("")}
 
 </tbody>
 
@@ -3103,22 +3138,12 @@ ${changes.join("")}
     }
 
 
-    const modal =
-        $("auditModal");
+    if ($("auditModal"))
 
-
-    if (!modal)
-
-        return;
-
-
-    modal.classList.remove(
-        "hidden"
-    );
-
-
-    document.body.style.overflow =
-        "hidden";
+        $("auditModal")
+            .classList.remove(
+                "hidden"
+            );
 
 };
 
@@ -3130,25 +3155,18 @@ ${changes.join("")}
 window.closeAuditModal =
 function() {
 
-    const modal =
-        $("auditModal");
+    if ($("auditModal"))
 
-
-    if (modal)
-
-        modal.classList.add(
-            "hidden"
-        );
-
-
-    document.body.style.overflow =
-        "";
+        $("auditModal")
+            .classList.add(
+                "hidden"
+            );
 
 };
 
 
 /* ==========================================================
-   ESCAPE CLOSE MODAL
+   ESCAPE KEY - CLOSE MODAL
 ========================================================== */
 
 document.addEventListener(
@@ -3169,317 +3187,426 @@ document.addEventListener(
 
 
 /* ==========================================================
-   EXPORT AUDIT
+   NAVIGATION
 ========================================================== */
-
-if ($("exportAudit")) {
-
-    $("exportAudit")
-        .addEventListener(
-            "click",
-            () => {
-
-
-                const headers = [
-
-                    "Date & Time",
-
-                    "Changed By",
-
-                    "Name",
-
-                    "Insurance Number",
-
-                    "Insemination Date",
-
-                    "Days Elapsed From Insemination",
-
-                    "Birth Date",
-
-                    "Days Elapsed From Birth",
-
-                    "Status",
-
-                    "Action",
-
-                    "OLD Name",
-
-                    "NEW Name",
-
-                    "OLD Insurance",
-
-                    "NEW Insurance",
-
-                    "OLD Insemination Date",
-
-                    "NEW Insemination Date",
-
-                    "OLD Birth Date",
-
-                    "NEW Birth Date",
-
-                    "OLD Status",
-
-                    "NEW Status"
-
-                ];
-
-
-                const rows =
-                    auditLogs.map(
-                        log => [
-
-                            formatDateTime(
-                                log.changed_at
-                            ),
-
-                            log.changed_by,
-
-                            log.name,
-
-                            log.insurance_number,
-
-                            formatDate(
-                                log.insemination_date
-                            ),
-
-                            log
-                                .days_elapsed_from_insemination,
-
-                            formatDate(
-                                log.birth_date
-                            ),
-
-                            log
-                                .days_elapsed_birth,
-
-                            log.status,
-
-                            log.action,
-
-                            log.old_name,
-
-                            log.new_name,
-
-                            log.old_insurance_number,
-
-                            log.new_insurance_number,
-
-                            formatDate(
-                                log.old_insemination_date
-                            ),
-
-                            formatDate(
-                                log.new_insemination_date
-                            ),
-
-                            formatDate(
-                                log.old_birth_date
-                            ),
-
-                            formatDate(
-                                log.new_birth_date
-                            ),
-
-                            log.old_status,
-
-                            log.new_status
-
-                        ]
-                    );
-
-
-                const csv =
-
-                    [
-                        headers,
-                        ...rows
-                    ]
-
-                        .map(
-                            row =>
-
-                                row
-                                    .map(
-                                        value =>
-
-                                            `"${String(
-                                                value ??
-                                                ""
-                                            ).replaceAll(
-                                                '"',
-                                                '""'
-                                            )}"`
-
-                                    )
-                                    .join(",")
-
-                        )
-                        .join("\n");
-
-
-                const blob =
-                    new Blob(
-                        [csv],
-                        {
-                            type:
-                                "text/csv;charset=utf-8"
-                        }
-                    );
-
-
-                const url =
-                    URL.createObjectURL(
-                        blob
-                    );
-
-
-                const a =
-                    document.createElement(
-                        "a"
-                    );
-
-
-                a.href =
-                    url;
-
-
-                a.download =
-                    `aska-audit-logs-${
-                        new Date()
-                            .toISOString()
-                            .slice(0, 10)
-                    }.csv`;
-
-
-                a.click();
-
-
-                URL.revokeObjectURL(
-                    url
-                );
-
-            }
-        );
-
-}
-
-
-/* ==========================================================
-   RECORD SEARCH
-========================================================== */
-
-if ($("recordSearch")) {
-
-    $("recordSearch")
-        .addEventListener(
-            "input",
-            renderRecords
-        );
-
-}
-
 
 /* ==========================================================
    NAVIGATION TABS
 ========================================================== */
 
-document
-    .querySelectorAll(
+const navTabs =
+    document.querySelectorAll(
         ".nav-tab"
-    )
-    .forEach(
-        button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    const target =
-                        button.dataset.tab;
-
-
-                    /*
-                     * Audit Logs only for
-                     * karthiknani.
-                     */
-
-                    if (
-
-                        target === "audit"
-
-                        &&
-
-                        normalized(
-                            currentUser
-                        ) !==
-                        "karthiknani"
-
-                    ) {
-
-                        return;
-
-                    }
-
-
-                    document
-                        .querySelectorAll(
-                            ".nav-tab"
-                        )
-                        .forEach(
-                            b =>
-                                b.classList.toggle(
-                                    "active",
-                                    b === button
-                                )
-                        );
-
-
-                    document
-                        .querySelectorAll(
-                            ".tab-content"
-                        )
-                        .forEach(
-                            section =>
-                                section.classList.toggle(
-                                    "active",
-                                    section.id === target
-                                )
-                        );
-
-
-                    window.scrollTo({
-
-                        top: 0,
-
-                        behavior: "smooth"
-
-                    });
-
-                }
-            );
-
-        }
     );
 
 
+navTabs.forEach(
+    tab => {
+
+        tab.addEventListener(
+            "click",
+            () => {
+
+                const target =
+                    tab.dataset.tab;
+
+
+                if (!target)
+                    return;
+
+                /* Clear Daily Records search when leaving the page */
 /* ==========================================================
-   ENTER WEBSITE
+   CLEAR SEARCH WHEN LEAVING A PAGE
 ========================================================== */
 
-async function enterSite() {
+/* Daily Records */
+if (
+    target !== "records" &&
+    $("recordSearch")
+) {
 
-    const name =
-        $("viewerName")
-            .value
-            .trim();
+    $("recordSearch").value = "";
+
+}
+
+/* Buffalo Registry */
+if (
+    target !== "registry" &&
+    $("registrySearch")
+) {
+
+    $("registrySearch").value = "";
+
+}
+
+/* Audit Logs */
+if (
+    target !== "audit" &&
+    $("auditSearch")
+) {
+
+    $("auditSearch").value = "";
+
+}
+
+
+                /*
+                 * Public users can view
+                 * Daily Records and Buffalo Registry.
+                 */
+
+                if (
+                    !isLoggedIn &&
+                    target !== "records" &&
+                    target !== "registry"
+                ) {
+
+                    toast(
+                        "Please login to access this section."
+                    );
+
+                    return;
+
+                }
+
+
+                /*
+                 * Audit Logs are only
+                 * available to karthiknani.
+                 */
+
+                if (
+                    target === "audit" &&
+                    normalized(
+                        currentUser
+                    ) !==
+                    "karthiknani"
+                ) {
+
+                    toast(
+                        "Audit Logs are available only to karthiknani."
+                    );
+
+                    return;
+
+                }
+
+
+                /*
+                 * Change active navigation button.
+                 */
+
+                navTabs.forEach(
+                    item => {
+
+                        item.classList.toggle(
+                            "active",
+                            item === tab
+                        );
+
+                    }
+                );
+
+
+                /*
+                 * Show ONLY the selected page.
+                 */
+
+                document
+                    .querySelectorAll(
+                        ".tab-content"
+                    )
+                    .forEach(
+                        section => {
+
+                            section.classList.toggle(
+                                "active",
+                                section.id ===
+                                target
+                            );
+
+                        }
+                    );
+
+
+                /*
+                 * Refresh selected page.
+                 */
+
+                if (
+                    target ===
+                    "records"
+                ) {
+
+                    renderRecords();
+
+                    renderPending();
+
+                }
+
+
+                if (
+                    target ===
+                    "registry"
+                ) {
+
+                    renderRegistry();
+
+                }
+
+
+                if (
+                    target ===
+                    "audit"
+                ) {
+
+                    renderAudit();
+
+                }
+
+            }
+        );
+
+    }
+);
+
+
+/* ==========================================================
+   LOGIN / PUBLIC VIEW ACCESS CONTROL
+========================================================== */
+
+function updateAccessUI() {
+
+    const loginButton =
+        $("loginButton");
+
+    const userMenu =
+        $("userMenu");
+
+    const registryNav =
+        $("registryNav");
+
+    const auditNav =
+        $("auditNav");
+
+    const recordEntryCard =
+        $("recordEntryCard");
+
+    const pendingHeading =
+        $("pendingSectionHeading");
+
+    const pendingCard =
+        $("pendingSectionCard");
+
+    const actionHeader =
+        $("recordsActionHeader");
+
+
+    if (loginButton)
+
+        loginButton.classList.toggle(
+            "hidden",
+            isLoggedIn
+        );
+
+
+    if (userMenu)
+
+        userMenu.classList.toggle(
+            "hidden",
+            !isLoggedIn
+        );
+
+
+    /*
+     * Buffalo Registry remains visible
+     * to public users in read-only mode.
+     */
+
+    if (registryNav)
+
+        registryNav.classList.remove(
+            "hidden"
+        );
+
+
+    /*
+     * Only karthiknani can see
+     * Audit Logs.
+     */
+
+    if (auditNav)
+
+        auditNav.classList.toggle(
+            "hidden",
+            !(
+                isLoggedIn &&
+                normalized(
+                    currentUser
+                ) ===
+                "karthiknani"
+            )
+        );
+
+
+    /*
+     * Management controls are hidden
+     * for public users.
+     */
+
+    if (recordEntryCard)
+
+        recordEntryCard.classList.toggle(
+            "hidden",
+            !isLoggedIn
+        );
+
+
+    if (pendingHeading)
+
+        pendingHeading.classList.toggle(
+            "hidden",
+            !isLoggedIn
+        );
+
+
+    if (pendingCard)
+
+        pendingCard.classList.toggle(
+            "hidden",
+            !isLoggedIn
+        );
+
+
+    if (actionHeader)
+
+        actionHeader.classList.toggle(
+            "hidden",
+            !isLoggedIn
+        );
+
+
+    const registryManagementCard =
+        $("registryManagementCard");
+
+    const registryActionHeader =
+        $("registryActionHeader");
+
+
+    if (registryManagementCard)
+
+        registryManagementCard.classList.toggle(
+            "hidden",
+            !isLoggedIn
+        );
+
+
+    if (registryActionHeader)
+
+        registryActionHeader.classList.toggle(
+            "hidden",
+            !isLoggedIn
+        );
+
+
+    if ($("currentUser"))
+
+        $("currentUser")
+            .textContent =
+            currentUser ||
+            "";
+
+
+    if ($("currentUserAvatar"))
+
+        $("currentUserAvatar")
+            .textContent =
+            currentUser
+                ? currentUser
+                    .charAt(0)
+                    .toUpperCase()
+                : "";
+
+
+    if ($("auditUser"))
+
+        $("auditUser")
+            .textContent =
+            currentUser ||
+            "";
+
+}
+
+
+/* ==========================================================
+   OPEN LOGIN SCREEN
+========================================================== */
+
+function openLogin() {
+
+    const welcome =
+        $("welcomeScreen");
+
+
+    if (!welcome)
+
+        return;
+
+
+    welcome.classList.add(
+        "login-overlay"
+    );
+
+
+    welcome.classList.remove(
+        "hidden"
+    );
+
+
+    const input =
+    $("viewerName");
+
+
+    if (input) {
+
+        input.value =
+            "";
+
+        setTimeout(
+            () =>
+                input.focus(),
+            100
+        );
+
+    }
+
+}
+
+
+window.openLogin =
+    openLogin;
+
+
+/* ==========================================================
+   ENTER SITE
+========================================================== */
+
+function enterSite() {
+
+   const input =
+    $("viewerName");
+
+const name =
+    input?.value
+        ?.trim() ||
+    "";
 
 
     if (!name) {
 
-        $("nameError")
-            .textContent =
-            "Please enter your name.";
+        toast(
+            "Please enter your name."
+        );
 
         return;
 
@@ -3489,89 +3616,71 @@ async function enterSite() {
     currentUser =
         name;
 
-
-    if ($("currentUser"))
-
-        $("currentUser")
-            .textContent =
-            currentUser;
+    isLoggedIn =
+        true;
 
 
-    if ($("auditUser"))
-
-        $("auditUser")
-            .textContent =
-            currentUser;
+    const welcome =
+        $("welcomeScreen");
 
 
-    if ($("userAvatar"))
+    if (welcome) {
 
-        $("userAvatar")
-            .textContent =
-            currentUser
-                .charAt(0)
-                .toUpperCase();
-
-
-    $("welcomeScreen")
-        .classList.add(
+        welcome.classList.add(
             "hidden"
         );
 
-
-    $("app")
-        .classList.remove(
-            "hidden"
+        welcome.classList.remove(
+            "login-overlay"
         );
-
-
-    const isAuditUser =
-        normalized(
-            currentUser
-        ) ===
-        "karthiknani";
-
-
-    if ($("auditNav"))
-
-        $("auditNav")
-            .classList.toggle(
-                "hidden",
-                !isAuditUser
-            );
-
-
-    try {
-
-        await loadAll();
 
     }
 
 
-    catch (error) {
-
-        console.error(
-            error
-        );
+    updateAccessUI();
 
 
-        alert(
+    const auditNav =
+        $("auditNav");
 
-            "The ASKA website could not connect to Supabase.\n\n" +
 
-            error.message +
+    if (auditNav) {
 
-            "\n\nCheck that the database tables and policies have been created."
-
+        auditNav.classList.toggle(
+            "hidden",
+            normalized(
+                currentUser
+            ) !==
+            "karthiknani"
         );
 
     }
+
+
+    loadAll()
+        .catch(
+            error => {
+
+                console.error(
+                    error
+                );
+
+                toast(
+                    "Logged in, but data refresh failed."
+                );
+
+            }
+        );
 
 }
 
 
+window.enterSite =
+    enterSite;
+
+
 /* ==========================================================
-   WELCOME FORM
+   WELCOME / LOGIN FORM
 ========================================================== */
 
 if ($("welcomeForm")) {
@@ -3592,7 +3701,101 @@ if ($("welcomeForm")) {
 
 
 /* ==========================================================
-   CHANGE USER
+   LOGOUT
+========================================================== */
+
+function logout() {
+
+    currentUser =
+        "";
+
+    isLoggedIn =
+        false;
+
+
+    
+    closeAuditModal();
+
+if ($("recordSearch")) {
+    $("recordSearch").value = "";
+}
+
+if ($("registrySearch")) {
+    $("registrySearch").value = "";
+}
+
+if ($("auditSearch")) {
+    $("auditSearch").value = "";
+}
+
+
+    document.querySelectorAll(
+        ".nav-tab"
+    ).forEach(
+        tab =>
+            tab.classList.remove(
+                "active"
+            )
+    );
+
+
+    const recordsTab =
+        document.querySelector(
+            '[data-tab="records"]'
+        );
+
+
+    if (recordsTab)
+
+        recordsTab.classList.add(
+            "active"
+        );
+
+
+   document.querySelectorAll(
+    ".tab-content"
+).forEach(
+    section =>
+        section.classList.remove(
+            "active"
+        )
+);
+
+
+    const recordsSection =
+        $("records");
+
+
+    if (recordsSection)
+
+        recordsSection.classList.add(
+            "active"
+        );
+
+
+    updateAccessUI();
+
+
+    renderRecords();
+
+    renderPending();
+
+    renderAudit();
+
+
+    toast(
+        "Logged out. Daily Records are now in read-only mode."
+    );
+
+}
+
+
+window.logout =
+    logout;
+
+
+/* ==========================================================
+   CHANGE USER / LOGOUT BUTTON
 ========================================================== */
 
 if ($("changeUser")) {
@@ -3602,7 +3805,7 @@ if ($("changeUser")) {
             "click",
             () => {
 
-                location.reload();
+                logout();
 
             }
         );
@@ -3611,12 +3814,47 @@ if ($("changeUser")) {
 
 
 /* ==========================================================
-   INITIAL FOCUS
+   INITIAL PAGE LOAD
 ========================================================== */
 
-if ($("viewerName")) {
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
 
-    $("viewerName")
-        .focus();
+        currentUser =
+            "";
 
-}
+        isLoggedIn =
+            false;
+
+
+        updateAccessUI();
+
+
+        /*
+         * Public mode:
+         * Daily Records and Buffalo Registry
+         * are loaded immediately.
+         *
+         * Audit Logs are not requested.
+         */
+
+        loadAll()
+            .catch(
+                error => {
+
+                    console.error(
+                        "Initial data load failed:",
+                        error
+                    );
+
+
+                    toast(
+                        "Unable to load dairy data."
+                    );
+
+                }
+            );
+
+    }
+);

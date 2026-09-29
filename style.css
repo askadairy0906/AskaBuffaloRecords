@@ -100,33 +100,538 @@ footer{border-top:1px solid var(--line);background:#fff;min-height:65px;display:
 }
 
 /* ==========================================================
-   ASKA AUDIT CHANGE MODAL
+   ASKA AUDIT CHANGE MODAL — PREMIUM UI
    ========================================================== */
-.audit-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
-.audit-modal.hidden{display:none!important}
-.audit-modal-overlay{position:absolute;inset:0;background:rgba(16,35,63,.58);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
-.audit-modal-box{position:relative;width:min(650px,100%);max-height:min(720px,90vh);overflow:hidden;background:#fff;border:1px solid #dfe7f1;border-radius:20px;box-shadow:0 30px 80px rgba(16,35,63,.24);animation:auditModalIn .2s ease-out}
-@keyframes auditModalIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-.audit-modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border-bottom:1px solid var(--line);background:#fff}
-.audit-modal-brand{display:flex;align-items:center;gap:12px}
-.audit-modal-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:#10233f;color:#fff;font-size:17px;font-weight:800}
-.audit-modal-title{font-family:Manrope,Inter,sans-serif;font-size:15px;font-weight:800;color:#10233f}
-.audit-modal-subtitle{margin-top:2px;color:#7a889a;font-size:11px;font-weight:600}
-.audit-modal-close{width:36px;height:36px;border:0;border-radius:10px;background:#f3f6f9;color:#68778d;font-size:24px;line-height:1;cursor:pointer;transition:.18s}
-.audit-modal-close:hover{background:#e9eef4;color:#10233f}
-.audit-modal-content{padding:24px;overflow-y:auto;max-height:58vh}
-.audit-change-heading{display:flex;align-items:center;gap:12px;margin-bottom:20px}
-.audit-change-icon{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:var(--blue-soft);color:var(--blue);font-size:20px;font-weight:800}
-.audit-change-heading h3{margin:0;font-family:Manrope,Inter,sans-serif;font-size:18px;color:#10233f}
-.audit-change-heading p{margin:4px 0 0;color:var(--muted);font-size:12px}
-.audit-change-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:13px;overflow:hidden}
-.audit-change-table th{padding:12px 14px;background:#f8fafc;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.07em;text-align:left;border-bottom:1px solid var(--line)}
-.audit-change-table td{padding:14px;border-bottom:1px solid #edf1f5;font-size:13px;color:#263951;vertical-align:middle}
-.audit-change-table tr:last-child td{border-bottom:0}
-.audit-change-field{width:28%;font-weight:800;color:#40516a!important}
-.audit-old-value{color:#b42318!important;background:#fff8f8}
-.audit-new-value{color:#087a38!important;background:#f6fcf8}
-.audit-value-label{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;margin-bottom:4px;opacity:.65}
-.audit-no-change{padding:18px;border-radius:12px;background:#f8fafc;color:#68778d;text-align:center;font-size:13px}
-.audit-modal-footer{display:flex;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);background:#fbfcfe}
-@media(max-width:600px){.audit-modal{padding:12px}.audit-modal-box{border-radius:16px}.audit-modal-content{padding:18px}.audit-change-table th,.audit-change-table td{padding:10px}.audit-change-field{width:25%}}
+
+.audit-modal{
+  position:fixed;
+  inset:0;
+  z-index:1000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+
+.audit-modal.hidden{
+  display:none!important;
+}
+
+/* Dark navy + soft blue overlay */
+.audit-modal-overlay{
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(37,99,235,.12), transparent 40%),
+    rgba(15,31,55,.72);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+
+/* Main popup */
+.audit-modal-box{
+  position:relative;
+  width:min(720px,100%);
+  max-height:min(760px,92vh);
+  overflow:hidden;
+
+  background:#ffffff;
+
+  border:1px solid rgba(255,255,255,.7);
+  border-radius:24px;
+
+  box-shadow:
+    0 35px 90px rgba(15,31,55,.32),
+    0 8px 30px rgba(37,99,235,.08);
+
+  animation:auditModalIn .22s cubic-bezier(.2,.8,.2,1);
+}
+
+@keyframes auditModalIn{
+  from{
+    opacity:0;
+    transform:translateY(18px) scale(.97);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0) scale(1);
+  }
+}
+
+/* ==========================================================
+   HEADER
+   ========================================================== */
+
+.audit-modal-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+
+  padding:22px 26px;
+
+  border-bottom:1px solid #e7edf5;
+
+  background:
+    linear-gradient(
+      135deg,
+      #ffffff 0%,
+      #f7faff 100%
+    );
+}
+
+.audit-modal-brand{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+/* ASKA logo */
+.audit-modal-icon{
+  width:46px;
+  height:46px;
+
+  border-radius:14px;
+
+  display:grid;
+  place-items:center;
+
+  background:
+    linear-gradient(
+      145deg,
+      #132b4f,
+      #0d1f39
+    );
+
+  color:#ffffff;
+
+  font-size:18px;
+  font-weight:800;
+
+  box-shadow:
+    0 8px 20px rgba(16,35,63,.20);
+}
+
+.audit-modal-title{
+  font-family:Manrope,Inter,sans-serif;
+  font-size:16px;
+  font-weight:800;
+  color:#10233f;
+  letter-spacing:-.01em;
+}
+
+.audit-modal-subtitle{
+  margin-top:3px;
+  color:#7b8ba3;
+  font-size:11px;
+  font-weight:600;
+}
+
+/* Close X */
+.audit-modal-close{
+  width:40px;
+  height:40px;
+
+  border:0;
+  border-radius:12px;
+
+  display:grid;
+  place-items:center;
+
+  background:#f1f5f9;
+  color:#64748b;
+
+  font-size:25px;
+  line-height:1;
+
+  cursor:pointer;
+
+  transition:
+    background .18s ease,
+    color .18s ease,
+    transform .18s ease;
+}
+
+.audit-modal-close:hover{
+  background:#e8eef7;
+  color:#10233f;
+  transform:rotate(90deg);
+}
+
+/* ==========================================================
+   CONTENT
+   ========================================================== */
+
+.audit-modal-content{
+  padding:28px;
+
+  overflow-y:auto;
+  max-height:58vh;
+
+  background:#ffffff;
+}
+
+/* Record Changes heading */
+.audit-change-heading{
+  display:flex;
+  align-items:center;
+  gap:14px;
+
+  margin-bottom:24px;
+}
+
+.audit-change-icon{
+  width:44px;
+  height:44px;
+
+  flex-shrink:0;
+
+  display:grid;
+  place-items:center;
+
+  border-radius:13px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #e9f1ff,
+      #f3f7ff
+    );
+
+  color:#2563eb;
+
+  font-size:21px;
+  font-weight:800;
+
+  border:1px solid #dce8ff;
+}
+
+.audit-change-heading h3{
+  margin:0;
+
+  font-family:Manrope,Inter,sans-serif;
+
+  font-size:20px;
+  font-weight:800;
+
+  color:#10233f;
+
+  letter-spacing:-.02em;
+}
+
+.audit-change-heading p{
+  margin:5px 0 0;
+
+  color:#718198;
+
+  font-size:12px;
+}
+
+/* ==========================================================
+   CHANGE TABLE
+   ========================================================== */
+
+.audit-change-table{
+  width:100%;
+
+  border-collapse:separate;
+  border-spacing:0;
+
+  border:1px solid #dfe7f1;
+
+  border-radius:16px;
+
+  overflow:hidden;
+
+  background:#ffffff;
+
+  box-shadow:
+    0 5px 18px rgba(16,35,63,.045);
+}
+
+/* Table header */
+.audit-change-table th{
+  padding:13px 15px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #f8faff,
+      #f3f6fb
+    );
+
+  color:#53657d;
+
+  font-size:10px;
+  font-weight:800;
+
+  text-transform:uppercase;
+  letter-spacing:.08em;
+
+  text-align:left;
+
+  border-bottom:1px solid #dfe7f1;
+}
+
+/* Table cells */
+.audit-change-table td{
+  padding:15px;
+
+  font-size:13px;
+
+  color:#263951;
+
+  vertical-align:middle;
+
+  border-bottom:1px solid #edf1f5;
+
+  transition:background .15s ease;
+}
+
+.audit-change-table tr:last-child td{
+  border-bottom:0;
+}
+
+.audit-change-table tr:hover td{
+  background:#fafcff;
+}
+
+/* Field name */
+.audit-change-field{
+  width:28%;
+
+  font-weight:800;
+
+  color:#243956!important;
+}
+
+/* ==========================================================
+   OLD VALUE
+   ========================================================== */
+
+.audit-old-value{
+  color:#b42318!important;
+
+  background:
+    linear-gradient(
+      90deg,
+      #fff5f4,
+      #fffafa
+    );
+
+  font-weight:600;
+
+  border-left:3px solid #ef6b61;
+}
+
+/* ==========================================================
+   NEW VALUE
+   ========================================================== */
+
+.audit-new-value{
+  color:#087a38!important;
+
+  background:
+    linear-gradient(
+      90deg,
+      #f1fbf5,
+      #fafffc
+    );
+
+  font-weight:700;
+
+  border-left:3px solid #22a65a;
+}
+
+/* Small OLD / NEW labels */
+.audit-value-label{
+  display:block;
+
+  margin-bottom:4px;
+
+  font-size:9px;
+
+  text-transform:uppercase;
+
+  letter-spacing:.07em;
+
+  font-weight:800;
+
+  opacity:.65;
+}
+
+/* No changes */
+.audit-no-change{
+  padding:22px;
+
+  border-radius:14px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #f7f9fc,
+      #fbfcfe
+    );
+
+  border:1px solid #e5ebf3;
+
+  color:#718198;
+
+  text-align:center;
+
+  font-size:13px;
+}
+
+/* ==========================================================
+   FOOTER
+   ========================================================== */
+
+.audit-modal-footer{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+
+  padding:18px 26px;
+
+  border-top:1px solid #e5ebf3;
+
+  background:
+    linear-gradient(
+      180deg,
+      #fbfcfe,
+      #f7f9fc
+    );
+}
+
+/* Close button */
+.audit-modal-footer .btn-primary{
+  min-width:94px;
+  height:42px;
+
+  border:0;
+  border-radius:12px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #2563eb,
+      #1d4ed8
+    );
+
+  color:#ffffff;
+
+  font-weight:800;
+
+  box-shadow:
+    0 8px 18px rgba(37,99,235,.22);
+
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    filter .18s ease;
+}
+
+.audit-modal-footer .btn-primary:hover{
+  transform:translateY(-2px);
+
+  box-shadow:
+    0 12px 24px rgba(37,99,235,.30);
+
+  filter:brightness(1.04);
+}
+
+.audit-modal-footer .btn-primary:active{
+  transform:translateY(0);
+}
+
+/* ==========================================================
+   MOBILE
+   ========================================================== */
+
+@media(max-width:600px){
+
+  .audit-modal{
+    padding:12px;
+  }
+
+  .audit-modal-box{
+    border-radius:18px;
+  }
+
+  .audit-modal-header{
+    padding:18px;
+  }
+
+  .audit-modal-content{
+    padding:18px;
+  }
+
+  .audit-modal-footer{
+    padding:15px 18px;
+  }
+
+  .audit-change-table{
+    font-size:12px;
+  }
+
+  .audit-change-table th,
+  .audit-change-table td{
+    padding:10px;
+  }
+
+  .audit-change-field{
+    width:25%;
+  }
+}
+
+/* ==========================================================
+   PUBLIC VIEWER / LOGIN
+========================================================== */
+
+/* Login button in the public header */
+.header-login-btn{
+  height:38px;
+  padding:0 15px;
+  border-radius:10px;
+  font-size:12px;
+  white-space:nowrap;
+}
+
+/* The existing welcome screen becomes a modal login screen
+   when the public user clicks Login. */
+.welcome-screen.login-overlay{
+  position:fixed;
+  inset:0;
+  z-index:2000;
+  min-height:100vh;
+  width:100%;
+}
+
+/* Keep public Daily Records clean and read-only. */
+#recordsActionHeader.hidden{
+  display:none!important;
+}
+
+/* Public viewer does not need management form/pending section. */
+#recordEntryCard.hidden,
+#pendingSectionHeading.hidden,
+#pendingSectionCard.hidden{
+  display:none!important;
+}
+
+/* Logged-out header should not reserve user-menu space. */
+#userMenu.hidden{
+  display:none!important;
+}
+
+@media(max-width:700px){
+  .header-login-btn{
+    height:36px;
+    padding:0 11px;
+    font-size:11px;
+  }
+}
+
+
+/* Public Buffalo Registry */
+#registryManagementCard.hidden,
+#registryActionHeader.hidden{display:none!important;}
