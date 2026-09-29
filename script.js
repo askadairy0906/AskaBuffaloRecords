@@ -133,67 +133,6 @@ function daysElapsed(dateString) {
 
 }
 
-/* ==========================================================
-   FORMAT ELAPSED TIME AS MONTHS + DAYS
-   Example:
-   27-07-2026 → 1m 23d
-   09-12-2025 → 9m 10d
-   19-03-2026 → 6m
-========================================================== */
-
-function formatElapsedDuration(dateString) {
-
-    if (!dateString)
-        return "N/A";
-
-    const start = new Date(
-        dateString + "T00:00:00"
-    );
-
-    if (Number.isNaN(start.getTime()))
-        return "N/A";
-
-    const today = todayStart();
-
-    if (start > today)
-        return "0d";
-
-    let months =
-        (today.getFullYear() - start.getFullYear()) * 12 +
-        (today.getMonth() - start.getMonth());
-
-    const monthDate = new Date(start);
-
-    monthDate.setMonth(
-        monthDate.getMonth() + months
-    );
-
-    if (monthDate > today) {
-
-        months--;
-
-        monthDate.setMonth(
-            monthDate.getMonth() - 1
-        );
-    }
-
-    const remainingDays =
-        Math.floor(
-            (today.getTime() - monthDate.getTime()) /
-            86400000
-        );
-
-    if (months > 0 && remainingDays > 0) {
-        return `${months}m ${remainingDays}d`;
-    }
-
-    if (months > 0) {
-        return `${months}m`;
-    }
-
-    return `${remainingDays}d`;
-}
-
 
 /* ==========================================================
    CALENDAR MONTH / DAY DURATION
@@ -831,23 +770,10 @@ function renderRecords() {
                             record.insemination_date
                         );
 
-<<<<<<< Updated upstream
-                const inseminationDays =
-                    formatElapsedDuration(
-                        record.insemination_date
-                    );
-
-
-                const birthDays =
-    formatElapsedDuration(
-        record.birth_date
-    );
-=======
                     const birthDays =
                         formatElapsedDuration(
                             record.birth_date
                         );
->>>>>>> Stashed changes
 
 
                     const actionCell =
@@ -903,15 +829,7 @@ function renderRecords() {
 </td>
 
 <td>
-<<<<<<< Updated upstream
-
-    ${
-    inseminationDays
-}
-
-=======
     ${inseminationDays}
->>>>>>> Stashed changes
 </td>
 
 <td>
@@ -926,11 +844,6 @@ function renderRecords() {
 
 <td>
 
-<<<<<<< Updated upstream
-   ${
-    birthDays
-}
-=======
 <span
     class="status ${statusClass(status)} status-readonly"
 >
@@ -938,7 +851,6 @@ function renderRecords() {
     ${esc(status)}
 
 </span>
->>>>>>> Stashed changes
 
 </td>
 
