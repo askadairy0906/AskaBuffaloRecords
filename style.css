@@ -635,3 +635,32 @@ footer{border-top:1px solid var(--line);background:#fff;min-height:65px;display:
 /* Public Buffalo Registry */
 #registryManagementCard.hidden,
 #registryActionHeader.hidden{display:none!important;}
+
+/* Compact blinking alerts for Active Tracking Records — added only */
+.tracking-alert {
+  display: inline-block;
+  padding: 4px 6px;
+  border: 1px solid #111;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.3;
+  text-align: center;
+  white-space: nowrap;
+  animation: trackingAlertBlink 0.8s infinite;
+}
+.tracking-alert.need-semen {
+  background: #facc15;
+  color: #991b1b;
+}
+.tracking-alert.check-semen {
+  background: #dc2626;
+  color: #fff;
+}
+@keyframes trackingAlertBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tracking-alert { animation: none; }
+}

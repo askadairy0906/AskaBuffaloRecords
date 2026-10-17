@@ -310,6 +310,66 @@ function formatElapsedDuration(
 }
 
 
+/* ==========================================================
+   TRACKING ALERT CONDITIONS — added only for blinking alerts
+========================================================== */
+function isMoreThanThreeCalendarMonthsAgo(dateString) {
+
+    if (!dateString)
+        return false;
+
+    const parts = String(dateString).split("-");
+    if (parts.length !== 3)
+        return false;
+
+    const year = Number(parts[0]);
+    const month = Number(parts[1]);
+    const day = Number(parts[2]);
+
+    if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day))
+        return false;
+
+    const start = new Date(year, month - 1, day);
+    if (Number.isNaN(start.getTime()))
+        return false;
+
+    const thresholdMonth = start.getMonth() + 3;
+    const thresholdYear = start.getFullYear() + Math.floor(thresholdMonth / 12);
+    const normalizedMonth = ((thresholdMonth % 12) + 12) % 12;
+    const lastDay = new Date(thresholdYear, normalizedMonth + 1, 0).getDate();
+    const threshold = new Date(
+        thresholdYear,
+        normalizedMonth,
+        Math.min(start.getDate(), lastDay)
+    );
+    threshold.setHours(0, 0, 0, 0);
+
+    return todayStart() > threshold;
+
+}
+
+function getTrackingAlert(record) {
+
+    if (
+        !record.insemination_date &&
+        isMoreThanThreeCalendarMonthsAgo(record.birth_date)
+    ) {
+        return '<span class="tracking-alert need-semen">⚡ NEED TO SEMEN</span>';
+    }
+
+    if (
+        record.insemination_date &&
+        isMoreThanThreeCalendarMonthsAgo(record.insemination_date) &&
+        makeStatus(record) !== "Successful"
+    ) {
+        return '<span class="tracking-alert check-semen">⚠ CHECK SUCCESS</span>';
+    }
+
+    return "";
+
+}
+
+
 function formatDate(
     dateString
 ) {
@@ -852,6 +912,10 @@ function renderRecords() {
 
 </span>
 
+</td>
+
+<td>
+    ${getTrackingAlert(record)}
 </td>
 
 ${actionCell}
